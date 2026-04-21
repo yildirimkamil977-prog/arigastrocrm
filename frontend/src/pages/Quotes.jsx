@@ -85,6 +85,7 @@ export default function Quotes() {
               <tr>
                 <th className="px-6 py-3">Teklif No</th>
                 <th className="px-6 py-3">Müşteri</th>
+                <th className="px-6 py-3">Hazırlayan</th>
                 <th className="px-6 py-3">Tarih</th>
                 <th className="px-6 py-3">Geçerlilik</th>
                 <th className="px-6 py-3">Tutar</th>
@@ -92,8 +93,8 @@ export default function Quotes() {
               </tr>
             </thead>
             <tbody>
-              {loading && <tr><td colSpan={6} className="p-8 text-center text-slate-400">Yükleniyor…</td></tr>}
-              {!loading && rows.length === 0 && <tr><td colSpan={6} className="p-8 text-center text-slate-400">Teklif bulunamadı.</td></tr>}
+              {loading && <tr><td colSpan={7} className="p-8 text-center text-slate-400">Yükleniyor…</td></tr>}
+              {!loading && rows.length === 0 && <tr><td colSpan={7} className="p-8 text-center text-slate-400">Teklif bulunamadı.</td></tr>}
               {rows.map((q) => (
                 <tr key={q.id} className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
                   <td className="px-6 py-3 font-mono text-xs">
@@ -107,6 +108,9 @@ export default function Quotes() {
                         {q.customer.company_name}
                       </Link>
                     ) : "-"}
+                  </td>
+                  <td className="px-6 py-3 text-slate-600" data-testid={`quote-creator-${q.id}`}>
+                    {q.creator?.name || <span className="text-slate-400">-</span>}
                   </td>
                   <td className="px-6 py-3 text-slate-600">{formatDate(q.issue_date)}</td>
                   <td className="px-6 py-3 text-slate-600">{formatDate(q.valid_until)}</td>

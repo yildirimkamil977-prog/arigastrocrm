@@ -189,7 +189,17 @@ ${c.data.company_name || "Arıgastro"}`);
 
       <PageHeader
         title={`Teklif ${quote.quote_no}`}
-        subtitle={customer ? customer.company_name : ""}
+        subtitle={
+          <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+            {customer ? <span>{customer.company_name}</span> : null}
+            {quote.creator?.name && (
+              <span className="inline-flex items-center gap-1 text-xs text-slate-500" data-testid="quote-creator">
+                <span className="inline-block w-1 h-1 rounded-full bg-slate-300" />
+                Hazırlayan: <b className="text-slate-700">{quote.creator.name}</b>
+              </span>
+            )}
+          </span>
+        }
       >
         <StatusBadge status={quote.status} />
         <Select value={quote.status} onValueChange={updateStatus}>

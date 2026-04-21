@@ -93,16 +93,18 @@ export default function CustomerDetail() {
                 <tr>
                   <th className="px-6 py-3">Teklif No</th>
                   <th className="px-6 py-3">Tarih</th>
+                  <th className="px-6 py-3">Hazırlayan</th>
                   <th className="px-6 py-3">Tutar</th>
                   <th className="px-6 py-3">Durum</th>
                 </tr>
               </thead>
               <tbody>
-                {quotes.length === 0 && <tr><td colSpan={4} className="p-8 text-center text-slate-400">Henüz teklif yok.</td></tr>}
+                {quotes.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-slate-400">Henüz teklif yok.</td></tr>}
                 {quotes.map((q) => (
                   <tr key={q.id} className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
                     <td className="px-6 py-3 font-mono text-xs"><Link to={`/teklifler/${q.id}`} className="text-brand hover:underline font-medium">{q.quote_no}</Link></td>
                     <td className="px-6 py-3 text-slate-600">{formatDate(q.issue_date)}</td>
+                    <td className="px-6 py-3 text-slate-600">{q.creator?.name || <span className="text-slate-400">-</span>}</td>
                     <td className="px-6 py-3 font-medium">{formatMoney(q.grand_total, q.currency)}</td>
                     <td className="px-6 py-3"><StatusBadge status={q.status} /></td>
                   </tr>

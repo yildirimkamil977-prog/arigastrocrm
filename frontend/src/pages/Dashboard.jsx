@@ -104,6 +104,7 @@ export default function Dashboard() {
               <tr>
                 <th className="px-6 py-3">Teklif No</th>
                 <th className="px-6 py-3">Müşteri</th>
+                <th className="px-6 py-3">Hazırlayan</th>
                 <th className="px-6 py-3">Tarih</th>
                 <th className="px-6 py-3">Tutar</th>
                 <th className="px-6 py-3">Durum</th>
@@ -111,10 +112,10 @@ export default function Dashboard() {
             </thead>
             <tbody>
               {loading && (
-                <tr><td colSpan={5} className="text-center p-6 text-slate-400">Yükleniyor…</td></tr>
+                <tr><td colSpan={6} className="text-center p-6 text-slate-400">Yükleniyor…</td></tr>
               )}
               {!loading && (!stats?.recent || stats.recent.length === 0) && (
-                <tr><td colSpan={5} className="text-center p-6 text-slate-400">Henüz teklif yok.</td></tr>
+                <tr><td colSpan={6} className="text-center p-6 text-slate-400">Henüz teklif yok.</td></tr>
               )}
               {stats?.recent?.map((q) => (
                 <tr key={q.id} className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
@@ -124,6 +125,7 @@ export default function Dashboard() {
                     </Link>
                   </td>
                   <td className="px-6 py-3">{q.customer?.company_name || "-"}</td>
+                  <td className="px-6 py-3 text-slate-600">{q.creator?.name || <span className="text-slate-400">-</span>}</td>
                   <td className="px-6 py-3 text-slate-600">{formatDate(q.issue_date)}</td>
                   <td className="px-6 py-3 font-medium">{formatMoney(q.grand_total, q.currency)}</td>
                   <td className="px-6 py-3"><StatusBadge status={q.status} /></td>

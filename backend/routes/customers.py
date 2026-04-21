@@ -75,6 +75,17 @@ def build_customers_router(db):
     @router.get("/{customer_id}/quotes")
     async def customer_quotes(customer_id: str, user=Depends(current_user)):
         items = await db.quotes.find({"customer_id": customer_id}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+        creator_ids = list({q.get("created_by") for q in items if q.get("created_by")})
+        if creator_ids:
+            creator_map = {
+                u["id"]: u
+                for u in await db.users.find(
+                    {"id": {"$in": creator_ids}},
+                    {"_id": 0, "id": 1, "name": 1},
+                ).to_list(len(creator_ids))
+            }
+            for q in items:
+                q["creator"] = creator_map.get(q.get("created_by"))
         return items
 
     return router

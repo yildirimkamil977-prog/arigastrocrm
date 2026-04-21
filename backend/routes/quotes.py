@@ -134,6 +134,19 @@ def build_quotes_router(db):
             for q_ in quotes:
                 q_["customer"] = cust_map.get(q_.get("customer_id"))
 
+        # attach creator (hazırlayan) info
+        creator_ids = list({q_.get("created_by") for q_ in quotes if q_.get("created_by")})
+        if creator_ids:
+            creator_map = {
+                u["id"]: u
+                for u in await db.users.find(
+                    {"id": {"$in": creator_ids}},
+                    {"_id": 0, "id": 1, "name": 1, "email": 1, "role": 1},
+                ).to_list(len(creator_ids))
+            }
+            for q_ in quotes:
+                q_["creator"] = creator_map.get(q_.get("created_by"))
+
         # sort by created_at desc
         quotes.sort(key=lambda x: x.get("created_at", ""), reverse=True)
         return quotes
@@ -162,6 +175,18 @@ def build_quotes_router(db):
         for q in recent:
             q["customer"] = cust_map.get(q.get("customer_id"))
 
+        creator_ids = list({q.get("created_by") for q in recent if q.get("created_by")})
+        if creator_ids:
+            creator_map = {
+                u["id"]: u
+                for u in await db.users.find(
+                    {"id": {"$in": creator_ids}},
+                    {"_id": 0, "id": 1, "name": 1},
+                ).to_list(len(creator_ids))
+            }
+            for q in recent:
+                q["creator"] = creator_map.get(q.get("created_by"))
+
         customer_count = await db.customers.count_documents({})
         product_count = await db.products.count_documents({})
         return {
@@ -180,6 +205,12 @@ def build_quotes_router(db):
         if q.get("customer_id"):
             cust = await db.customers.find_one({"id": q["customer_id"]}, {"_id": 0})
             q["customer"] = cust
+        if q.get("created_by"):
+            creator = await db.users.find_one(
+                {"id": q["created_by"]},
+                {"_id": 0, "id": 1, "name": 1, "email": 1, "role": 1},
+            )
+            q["creator"] = creator
         # revisions list
         revisions = await db.quotes.find(
             {"revision_of": q.get("revision_of") or quote_id},

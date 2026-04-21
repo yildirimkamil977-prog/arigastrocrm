@@ -1,0 +1,62 @@
+# ArıCRM - Product Requirements Document
+
+## Original Problem Statement
+Turkish B2B CRM for **Arıgastro** (endüstriyel mutfak ekipmanları) focused on customer management + professional price quotation workflow. System name: **ArıCRM**. Corporate color: **#0073c4** + white.
+
+## User Personas
+- **Admin (Yönetici)**: full access — manages users, company settings, all customers/quotes.
+- **Satış Temsilcisi (Sales)**: can manage customers/quotes/products but cannot access Settings or Users.
+
+## Architecture
+- **Backend**: FastAPI (Python) + MongoDB (motor). Routes: `auth`, `users`, `customers`, `products`, `quotes`, `settings`. JWT cookie-based auth (httpOnly, SameSite=None, Secure). APScheduler daily feed sync.
+- **Frontend**: React 19 + React Router + Tailwind + shadcn/ui + lucide-react. Fonts: Outfit (heading) + Manrope (body). Turkish UI.
+- **Integrations**:
+  - **Myikas Google Shopping XML feed** — daily + manual sync (4173 products currently).
+  - **Resend** (configurable via settings page) for email with PDF attachment.
+  - **Custom SMTP** fallback for corporate mail servers.
+  - **WhatsApp** via `wa.me` link.
+  - **PDF** via `html2canvas` + `jspdf` (client-side).
+
+## Core Static Requirements
+- Quote statuses: `taslak`, `gonderildi`, `kabul`, `red`, `suresi_doldu`.
+- Currencies: TRY (default), USD, EUR.
+- Auto-generated quote number: `AR-YYYYMM-NNNN`, revisions append `-Rx`.
+- Discount applied on VAT-included total (per user spec).
+- PDF template must be professional, print-ready A4.
+
+## Implemented (2026-04-21) ✅
+- Auth: login / logout / me, admin seed on startup, JWT access + refresh cookies.
+- Users CRUD (admin-only) with role selection.
+- Customers CRUD with filters (name, tax no, phone, email, city, date range).
+- Customer detail page with embedded quote list.
+- Products page: grid view with images, search, manual "Feed'i Güncelle" button (count + last sync displayed).
+- Daily scheduled feed sync (APScheduler + asyncio task).
+- Quote form: live customer search (by firma name or vergi no), live product autocomplete (name/code/GTIN/brand), inline pencil-edit on every field including image, per-line discount, live total calculation.
+- Quote view: professional PDF template preview (A4), PDF download, print, email dialog (with subject/message + auto PDF attachment), WhatsApp dialog, revisions list, status change, delete.
+- Revision system: each revision saved as separate record; all revisions visible under parent quote.
+- Settings page: Company info, bank info, Email provider (Resend/SMTP) config, quote defaults tab.
+- Dashboard: 5 status count widgets, totals for Customer/Product/Quote, Recent Quotes list (NO revenue metrics per user request).
+- Role-based sidebar: sales rep doesn't see Kullanıcılar/Ayarlar.
+- Testing: 25/25 backend tests, full frontend smoke passed.
+
+## Prioritized Backlog
+### P1 — Nice to have
+- Native `<input type="date">` → shadcn Calendar DatePicker (Turkish locale `gg.aa.yyyy`).
+- `PATCH /api/customers/{id}` partial update.
+- Quote duplication (copy to new quote with new number, no revision linkage).
+- Bulk email to multiple customers (quote template campaign).
+
+### P2 — Future
+- Rate limiting + brute-force lockout on login.
+- CSRF protection (currently SameSite=None + secure cookies).
+- Quote approval workflow (when customer accepts via public link).
+- Customer tags/segments + quote performance analytics.
+- Export customers/quotes to Excel.
+
+## Next Tasks
+- Show user a wow demo — login → create customer → create quote (with feed products) → download PDF.
+- Optional: upgrade date pickers to shadcn Calendar for better Turkish UX.
+- Optional: public quote share link for customer acceptance tracking.
+
+## Test Credentials
+See `/app/memory/test_credentials.md`.

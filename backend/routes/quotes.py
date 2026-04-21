@@ -338,6 +338,17 @@ def build_quotes_router(db):
                 result = await asyncio.to_thread(resend.Emails.send, params)
             except Exception as e:
                 logger.exception("Resend gönderim hatası")
+                err_text = str(e)
+                if "testing emails to your own email address" in err_text or "verify a domain" in err_text:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=(
+                            "Resend domaininiz henüz doğrulanmamış. Şu an sadece kendi kayıtlı "
+                            "e-posta adresinize gönderebilirsiniz. Müşterilere gönderebilmek için "
+                            "resend.com/domains adresinden domaininizi doğrulayın ve Ayarlar > E-posta "
+                            "sekmesinden 'Gönderen E-posta'yı kendi domaininizden bir adres yapın."
+                        ),
+                    )
                 raise HTTPException(status_code=500, detail=f"E-posta gönderilemedi: {e}")
             # update status & log
             await db.quotes.update_one(

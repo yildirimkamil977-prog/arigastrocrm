@@ -1,14 +1,17 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { api, formatApiError, formatDate, formatMoney } from "../lib/api";
 import PageHeader from "../components/PageHeader";
 import StatusBadge from "../components/StatusBadge";
+import Pagination from "../components/Pagination";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
 import { Plus, Save, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+
+const QUOTES_PAGE_SIZE = 10;
 
 export default function CustomerDetail() {
   const { id } = useParams();
@@ -17,6 +20,12 @@ export default function CustomerDetail() {
   const [quotes, setQuotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [quotesPage, setQuotesPage] = useState(1);
+
+  const pagedQuotes = useMemo(() => {
+    const start = (quotesPage - 1) * QUOTES_PAGE_SIZE;
+    return quotes.slice(start, start + QUOTES_PAGE_SIZE);
+  }, [quotes, quotesPage]);
 
   const load = async () => {
     setLoading(true);
@@ -100,7 +109,7 @@ export default function CustomerDetail() {
               </thead>
               <tbody>
                 {quotes.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-slate-400">Henüz teklif yok.</td></tr>}
-                {quotes.map((q) => (
+                {pagedQuotes.map((q) => (
                   <tr key={q.id} className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
                     <td className="px-6 py-3 font-mono text-xs"><Link to={`/teklifler/${q.id}`} className="text-brand hover:underline font-medium">{q.quote_no}</Link></td>
                     <td className="px-6 py-3 text-slate-600">{formatDate(q.issue_date)}</td>
@@ -112,6 +121,7 @@ export default function CustomerDetail() {
               </tbody>
             </table>
           </div>
+          <Pagination page={quotesPage} pageSize={QUOTES_PAGE_SIZE} total={quotes.length} onPageChange={setQuotesPage} compact />
         </div>
       </div>
     </div>

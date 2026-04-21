@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, formatApiError, formatDate } from "../lib/api";
 import PageHeader from "../components/PageHeader";
+import Pagination from "../components/Pagination";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
@@ -15,6 +16,7 @@ const EMPTY = {
   company_name: "", tax_number: "", tax_office: "", contact_person: "",
   phone: "", whatsapp: "", email: "", address: "", city: "", notes: "",
 };
+const PAGE_SIZE = 20;
 
 export default function Customers() {
   const [rows, setRows] = useState([]);
@@ -25,12 +27,14 @@ export default function Customers() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(EMPTY);
   const [editing, setEditing] = useState(null);
+  const [page, setPage] = useState(1);
 
   const load = async () => {
     setLoading(true);
     try {
       const r = await api.get("/customers", { params: { search, date_from: dateFrom, date_to: dateTo } });
       setRows(r.data);
+      setPage(1);
     } catch (e) {
       toast.error(formatApiError(e));
     } finally {
@@ -44,6 +48,11 @@ export default function Customers() {
     return () => clearTimeout(t);
     // eslint-disable-next-line
   }, [search, dateFrom, dateTo]);
+
+  const pagedRows = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return rows.slice(start, start + PAGE_SIZE);
+  }, [rows, page]);
 
   const openNew = () => { setEditing(null); setForm(EMPTY); setOpen(true); };
   const openEdit = (c) => { setEditing(c); setForm({ ...EMPTY, ...c }); setOpen(true); };
@@ -150,7 +159,7 @@ export default function Customers() {
               {!loading && rows.length === 0 && (
                 <tr><td colSpan={7} className="p-8 text-center text-slate-400">Müşteri bulunamadı.</td></tr>
               )}
-              {rows.map((c) => (
+              {pagedRows.map((c) => (
                 <tr key={c.id} className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
                   <td className="px-6 py-3">
                     <Link to={`/musteriler/${c.id}`} className="font-medium text-slate-900 hover:text-brand" data-testid={`customer-link-${c.id}`}>
@@ -177,6 +186,7 @@ export default function Customers() {
             </tbody>
           </table>
         </div>
+        <Pagination page={page} pageSize={PAGE_SIZE} total={rows.length} onPageChange={setPage} />
       </div>
     </div>
   );

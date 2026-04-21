@@ -1,5 +1,5 @@
 import "@/App.css";
-import React from "react";
+import React, { useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -15,6 +15,19 @@ import QuoteView from "./pages/QuoteView";
 import Settings from "./pages/Settings";
 import Users from "./pages/Users";
 
+function useRemoveEmergentBadge() {
+  useEffect(() => {
+    const remove = () => {
+      const el = document.getElementById("emergent-badge");
+      if (el) el.remove();
+    };
+    remove();
+    const observer = new MutationObserver(remove);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
+}
+
 function Protected({ children, adminOnly = false }) {
   return (
     <ProtectedRoute adminOnly={adminOnly}>
@@ -24,6 +37,7 @@ function Protected({ children, adminOnly = false }) {
 }
 
 function App() {
+  useRemoveEmergentBadge();
   return (
     <div className="App">
       <AuthProvider>

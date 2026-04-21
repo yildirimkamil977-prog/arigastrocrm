@@ -75,10 +75,50 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="bank">
-          <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><Label>Banka Adı</Label><Input value={form.bank_name} onChange={(e) => set("bank_name", e.target.value)} /></div>
-            <div><Label>Hesap Sahibi</Label><Input value={form.bank_account_holder} onChange={(e) => set("bank_account_holder", e.target.value)} /></div>
-            <div className="md:col-span-2"><Label>IBAN</Label><Input value={form.bank_iban} onChange={(e) => set("bank_iban", e.target.value)} /></div>
+          <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 space-y-4">
+            <div className="text-sm text-slate-500">
+              En fazla <b>3 banka hesabı</b> ekleyebilirsiniz. Girilen hesaplar teklif PDF'inin alt kısmında gösterilir. Boş bıraktığınız hesaplar görünmez.
+            </div>
+            {[0, 1, 2].map((i) => {
+              const banks = form.banks || [];
+              const b = banks[i] || { name: "", account_holder: "", iban: "", currency: "TRY" };
+              const setBank = (patch) => {
+                const next = [...banks];
+                while (next.length <= i) next.push({ name: "", account_holder: "", iban: "", currency: "TRY" });
+                next[i] = { ...next[i], ...patch };
+                set("banks", next);
+              };
+              const removeBank = () => {
+                const next = banks.filter((_, idx) => idx !== i);
+                set("banks", next);
+              };
+              return (
+                <div key={i} className="border border-slate-200 rounded-lg p-4 space-y-3" data-testid={`bank-slot-${i}`}>
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs font-bold uppercase tracking-wider text-slate-500">Banka {i + 1}</div>
+                    {(b.name || b.account_holder || b.iban) && (
+                      <button type="button" onClick={removeBank} className="text-xs text-red-600 hover:text-red-700">Temizle</button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div><Label>Banka Adı</Label><Input value={b.name} onChange={(e) => setBank({ name: e.target.value })} placeholder="Garanti BBVA" data-testid={`bank-name-${i}`} /></div>
+                    <div><Label>Hesap Sahibi</Label><Input value={b.account_holder} onChange={(e) => setBank({ account_holder: e.target.value })} placeholder="Arıgastro Ltd. Şti." /></div>
+                    <div>
+                      <Label>Para Birimi</Label>
+                      <Select value={b.currency || "TRY"} onValueChange={(v) => setBank({ currency: v })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="TRY">₺ TL</SelectItem>
+                          <SelectItem value="USD">$ USD</SelectItem>
+                          <SelectItem value="EUR">€ EUR</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="md:col-span-3"><Label>IBAN</Label><Input value={b.iban} onChange={(e) => setBank({ iban: e.target.value })} placeholder="TR00 0000 0000 0000 0000 0000 00" className="font-mono" /></div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </TabsContent>
 

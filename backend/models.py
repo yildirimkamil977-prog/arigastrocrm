@@ -133,6 +133,13 @@ class QuoteOut(QuoteBase):
 
 
 # ===== Settings =====
+class BankAccount(BaseModel):
+    name: str = ""
+    account_holder: str = ""
+    iban: str = ""
+    currency: str = "TRY"
+
+
 class CompanySettings(BaseModel):
     company_name: str = "Arıgastro"
     tagline: str = "Endüstriyel Mutfak Ekipmanları"
@@ -146,6 +153,8 @@ class CompanySettings(BaseModel):
     bank_name: str = ""
     bank_iban: str = ""
     bank_account_holder: str = ""
+    # Up to 3 bank accounts for PDF footer
+    banks: List[BankAccount] = []
     # Authorized person (used for PDF signature)
     authorized_person_name: str = "Murat Arısoy"
     # Social media

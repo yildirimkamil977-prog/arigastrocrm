@@ -25,6 +25,16 @@ async def get_settings_doc(db) -> dict:
     if missing:
         await db.settings.update_one({"key": SETTINGS_KEY}, {"$set": missing})
         doc.update(missing)
+    # migrate legacy single bank → banks[0]
+    if (not doc.get("banks")) and (doc.get("bank_name") or doc.get("bank_iban")):
+        migrated = [{
+            "name": doc.get("bank_name", ""),
+            "account_holder": doc.get("bank_account_holder", ""),
+            "iban": doc.get("bank_iban", ""),
+            "currency": "TRY",
+        }]
+        await db.settings.update_one({"key": SETTINGS_KEY}, {"$set": {"banks": migrated}})
+        doc["banks"] = migrated
     return doc
 
 
@@ -46,6 +56,20 @@ def build_settings_router(db):
     async def update_settings(body: CompanySettings, user=Depends(current_user)):
         require_admin(user)
         data = body.model_dump()
+        # clean banks: drop empties, cap at 3
+        clean_banks = []
+        for b in (data.get("banks") or []):
+            name = (b.get("name") or "").strip()
+            iban = (b.get("iban") or "").strip()
+            holder = (b.get("account_holder") or "").strip()
+            if name or iban or holder:
+                clean_banks.append({
+                    "name": name,
+                    "account_holder": holder,
+                    "iban": iban,
+                    "currency": b.get("currency") or "TRY",
+                })
+        data["banks"] = clean_banks[:3]
         data["key"] = SETTINGS_KEY
         await db.settings.update_one(
             {"key": SETTINGS_KEY}, {"$set": data}, upsert=True

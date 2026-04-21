@@ -157,11 +157,43 @@ export default function QuotePDFTemplate({ quote, customer, company }) {
       )}
 
       {/* Footer */}
-      <div style={{ marginTop: 28, borderTop: "1px solid #e2e8f0", paddingTop: 14, display: "flex", justifyContent: "space-between", fontSize: 9, color: "#64748b" }}>
-        <div>
-          {company?.bank_name && <div><b>Banka:</b> {company.bank_name}</div>}
-          {company?.bank_account_holder && <div><b>Hesap Sahibi:</b> {company.bank_account_holder}</div>}
-          {company?.bank_iban && <div style={{ fontFamily: "JetBrains Mono, monospace" }}>{company.bank_iban}</div>}
+      <div style={{ marginTop: 28, borderTop: "1px solid #e2e8f0", paddingTop: 14, display: "flex", justifyContent: "space-between", gap: 20, fontSize: 9, color: "#64748b" }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {(() => {
+            const banks = (company?.banks && company.banks.length > 0)
+              ? company.banks
+              : (company?.bank_name || company?.bank_iban)
+                ? [{ name: company.bank_name, account_holder: company.bank_account_holder, iban: company.bank_iban, currency: "TRY" }]
+                : [];
+            if (banks.length === 0) return null;
+            return (
+              <div>
+                <div style={{ fontSize: 8, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.2, color: "#94a3b8", marginBottom: 4 }}>
+                  Banka Hesap Bilgileri
+                </div>
+                <table style={{ borderCollapse: "collapse", fontSize: 9 }}>
+                  <tbody>
+                    {banks.slice(0, 3).map((b, idx) => (
+                      <tr key={idx}>
+                        <td style={{ padding: "2px 8px 2px 0", color: "#64748b", whiteSpace: "nowrap" }}>
+                          <b>{b.name}</b>
+                          {b.currency && b.currency !== "TRY" ? ` (${b.currency})` : ""}
+                        </td>
+                        <td style={{ padding: "2px 8px", color: "#64748b", fontFamily: "JetBrains Mono, monospace" }}>
+                          {b.iban}
+                        </td>
+                        {b.account_holder && (
+                          <td style={{ padding: "2px 0", color: "#94a3b8" }}>
+                            · {b.account_holder}
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })()}
         </div>
         <div style={{ textAlign: "right" }}>
           <div>Bu teklif {formatDate(valid_until)} tarihine kadar geçerlidir.</div>

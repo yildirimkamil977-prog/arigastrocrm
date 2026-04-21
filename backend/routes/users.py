@@ -13,7 +13,8 @@ def build_users_router(db):
 
     @router.get("")
     async def list_users(user=Depends(current_user)):
-        require_admin(user)
+        # All authenticated users can list users (for "Hazırlayan" filter on Quotes page).
+        # Write operations below remain admin-only.
         users = await db.users.find({}, {"_id": 0, "password_hash": 0}).to_list(500)
         return users
 

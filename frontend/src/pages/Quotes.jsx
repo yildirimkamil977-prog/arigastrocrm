@@ -15,8 +15,10 @@ const STATUS_OPTIONS = ["", ...Object.keys(STATUS_MAP)];
 
 export default function Quotes() {
   const [rows, setRows] = useState([]);
+  const [users, setUsers] = useState([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
+  const [createdBy, setCreatedBy] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [loading, setLoading] = useState(true);
@@ -25,7 +27,7 @@ export default function Quotes() {
     setLoading(true);
     try {
       const r = await api.get("/quotes", {
-        params: { search, status, date_from: dateFrom, date_to: dateTo },
+        params: { search, status, created_by: createdBy, date_from: dateFrom, date_to: dateTo },
       });
       setRows(r.data);
     } catch (e) {
@@ -35,12 +37,16 @@ export default function Quotes() {
     }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => {
+    api.get("/users").then((r) => setUsers(r.data)).catch(() => setUsers([]));
+    load();
+    /* eslint-disable-next-line */
+  }, []);
   useEffect(() => {
     const t = setTimeout(load, 300);
     return () => clearTimeout(t);
     // eslint-disable-next-line
-  }, [search, status, dateFrom, dateTo]);
+  }, [search, status, createdBy, dateFrom, dateTo]);
 
   return (
     <div>
@@ -52,7 +58,7 @@ export default function Quotes() {
         </Link>
       </PageHeader>
 
-      <div className="bg-white border border-slate-200 rounded-xl p-4 mb-4 grid grid-cols-1 md:grid-cols-4 gap-3">
+      <div className="bg-white border border-slate-200 rounded-xl p-4 mb-4 grid grid-cols-1 md:grid-cols-5 gap-3">
         <div className="md:col-span-2 relative">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <Input
@@ -69,6 +75,17 @@ export default function Quotes() {
             <SelectItem value="all">Tüm durumlar</SelectItem>
             {STATUS_OPTIONS.filter(Boolean).map((s) => (
               <SelectItem key={s} value={s}>{STATUS_MAP[s].label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={createdBy || "all"} onValueChange={(v) => setCreatedBy(v === "all" ? "" : v)}>
+          <SelectTrigger data-testid="quote-creator-filter"><SelectValue placeholder="Hazırlayan" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tüm kullanıcılar</SelectItem>
+            {users.map((u) => (
+              <SelectItem key={u.id} value={u.id} data-testid={`quote-creator-option-${u.id}`}>
+                {u.name}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>

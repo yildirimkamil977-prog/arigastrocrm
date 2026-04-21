@@ -77,6 +77,7 @@ def build_quotes_router(db):
         search: str = Query(""),
         status: str = Query(""),
         customer_id: str = Query(""),
+        created_by: str = Query(""),
         date_from: str = Query(""),
         date_to: str = Query(""),
         user=Depends(current_user),
@@ -86,6 +87,8 @@ def build_quotes_router(db):
             q["status"] = status
         if customer_id:
             q["customer_id"] = customer_id
+        if created_by:
+            q["created_by"] = created_by
         if date_from:
             q.setdefault("issue_date", {})["$gte"] = date_from
         if date_to:
@@ -114,6 +117,8 @@ def build_quotes_router(db):
                 extra_q = {"customer_id": {"$in": customer_ids}}
                 if status:
                     extra_q["status"] = status
+                if created_by:
+                    extra_q["created_by"] = created_by
                 extras = await db.quotes.find(extra_q, {"_id": 0}).to_list(2000)
                 # merge unique
                 existing_ids = {x["id"] for x in quotes}

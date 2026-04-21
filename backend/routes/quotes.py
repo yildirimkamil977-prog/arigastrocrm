@@ -1,9 +1,12 @@
-"""Quote endpoints: CRUD, revisions, stats, email."""
+"""Quote endpoints: CRUD, revisions, stats, email, public share."""
 import asyncio
 import base64
 import logging
+import os
+import secrets
 from datetime import datetime, timezone
-from fastapi import APIRouter, Request, HTTPException, Depends, Query
+from fastapi import APIRouter, Request, Response, HTTPException, Depends, Query
+from pydantic import BaseModel
 import resend
 
 from models import QuoteCreate, QuoteUpdate, SendQuoteEmailRequest, uid
@@ -13,6 +16,10 @@ from routes.settings import get_settings_doc
 logger = logging.getLogger(__name__)
 
 VALID_STATUSES = {"taslak", "gonderildi", "kabul", "red", "suresi_doldu"}
+
+
+class PdfShareRequest(BaseModel):
+    pdf_base64: str
 
 
 def compute_totals(items, vat_rate: float, discount_rate: float) -> dict:
@@ -287,6 +294,7 @@ def build_quotes_router(db):
             if not api_key:
                 raise HTTPException(status_code=400, detail="Resend API anahtarı ayarlanmadı. Ayarlar'dan ekleyin.")
             resend.api_key = api_key
+            company_email = settings.get("email", "").strip()
             params = {
                 "from": settings.get("resend_from_email") or "onboarding@resend.dev",
                 "to": [body.recipient_email],
@@ -297,6 +305,8 @@ def build_quotes_router(db):
                     "content": list(pdf_bytes),
                 }],
             }
+            if company_email:
+                params["reply_to"] = company_email
             try:
                 result = await asyncio.to_thread(resend.Emails.send, params)
             except Exception as e:
@@ -331,6 +341,9 @@ def build_quotes_router(db):
             msg["From"] = from_email
             msg["To"] = body.recipient_email
             msg["Subject"] = subject
+            company_email = settings.get("email", "").strip()
+            if company_email:
+                msg["Reply-To"] = company_email
             msg.attach(MIMEText(html_body, "html", "utf-8"))
             part = MIMEApplication(pdf_bytes, _subtype="pdf")
             part.add_header("Content-Disposition", "attachment", filename=f"Teklif-{q['quote_no']}.pdf")
@@ -361,5 +374,50 @@ def build_quotes_router(db):
             return {"ok": True, "provider": "smtp"}
         else:
             raise HTTPException(status_code=400, detail="Desteklenmeyen e-posta sağlayıcı")
+
+    @router.post("/{quote_id}/share-pdf")
+    async def create_pdf_share(quote_id: str, body: PdfShareRequest, user=Depends(current_user)):
+        """Upload generated PDF (base64) and create a public share token + URL."""
+        q = await db.quotes.find_one({"id": quote_id}, {"_id": 0})
+        if not q:
+            raise HTTPException(status_code=404, detail="Teklif bulunamadı")
+        try:
+            pdf_bytes = base64.b64decode(body.pdf_base64.split(",")[-1])
+        except Exception:
+            raise HTTPException(status_code=400, detail="Geçersiz PDF verisi")
+        token = secrets.token_urlsafe(12)
+        await db.quote_shares.insert_one({
+            "token": token,
+            "quote_id": quote_id,
+            "quote_no": q.get("quote_no"),
+            "pdf_b64": base64.b64encode(pdf_bytes).decode("ascii"),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        })
+        public_base = os.environ.get("PUBLIC_BASE_URL", "").rstrip("/")
+        url = f"{public_base}/api/public/quotes/{token}/pdf" if public_base else f"/api/public/quotes/{token}/pdf"
+        return {"token": token, "url": url, "filename": f"Teklif-{q.get('quote_no')}.pdf"}
+
+    return router
+
+
+def build_public_pdf_router(db):
+    """Public (no-auth) router for serving shared PDFs via WhatsApp/email links."""
+    router = APIRouter(prefix="/public/quotes", tags=["public"])
+
+    @router.get("/{token}/pdf")
+    async def get_public_pdf(token: str):
+        doc = await db.quote_shares.find_one({"token": token}, {"_id": 0})
+        if not doc:
+            raise HTTPException(status_code=404, detail="Paylaşım bulunamadı veya süresi doldu")
+        try:
+            pdf_bytes = base64.b64decode(doc["pdf_b64"])
+        except Exception:
+            raise HTTPException(status_code=500, detail="PDF çözümlenemedi")
+        filename = f"Teklif-{doc.get('quote_no') or token}.pdf"
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'inline; filename="{filename}"'},
+        )
 
     return router

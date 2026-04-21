@@ -249,7 +249,7 @@ ${c.data.company_name || "Arıgastro"}`);
             <div className="space-y-3">
               <div><Label>Numara (ülke kodu ile)</Label><Input value={waNumber} onChange={(e) => setWaNumber(e.target.value)} placeholder="+905xxxxxxxxx" data-testid="wa-number-input" /></div>
               <div><Label>Mesaj</Label><Textarea rows={4} value={waMessage} onChange={(e) => setWaMessage(e.target.value)} /></div>
-              <p className="text-xs text-slate-500">WhatsApp Web/uygulamasında sohbet açılır. PDF'i ayrıca "PDF İndir" ile indirip paylaşabilirsiniz.</p>
+              <p className="text-xs text-slate-500">WhatsApp Web/uygulamasında sohbet açılır. Teklif PDF'inizin indirme bağlantısı mesajın sonuna otomatik eklenir; müşteri tek tıkla PDF'i açabilir.</p>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setWaOpen(false)}>İptal</Button>
                 <Button onClick={openWhatsApp} className="bg-green-600 hover:bg-green-700" data-testid="wa-send-btn">

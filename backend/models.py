@@ -92,8 +92,8 @@ class QuoteItem(BaseModel):
 class QuoteBase(BaseModel):
     customer_id: str
     currency: str = "TRY"
-    vat_rate: float = 20.0
-    discount_rate: float = 0.0  # applied on VAT-included total
+    vat_rate: float = 0.0
+    discount_rate: float = 0.0  # applied on subtotal (which already includes VAT per user spec)
     valid_until: str  # ISO date
     notes: Optional[str] = ""
     items: List[QuoteItem] = []
@@ -146,6 +146,8 @@ class CompanySettings(BaseModel):
     bank_name: str = ""
     bank_iban: str = ""
     bank_account_holder: str = ""
+    # Authorized person (used for PDF signature)
+    authorized_person_name: str = "Murat Arısoy"
     # Social media
     social_instagram: str = ""
     social_facebook: str = ""
@@ -164,7 +166,7 @@ class CompanySettings(BaseModel):
     smtp_from_email: str = ""
     smtp_use_tls: bool = True
     # Default quote defaults
-    default_vat_rate: float = 20.0
+    default_vat_rate: float = 0.0
     default_validity_days: int = 30
     default_quote_notes: str = ""
 

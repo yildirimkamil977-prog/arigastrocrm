@@ -14,12 +14,17 @@ def _sanitize_for_sales(data: dict) -> dict:
 
 async def get_settings_doc(db) -> dict:
     doc = await db.settings.find_one({"key": SETTINGS_KEY}, {"_id": 0})
+    defaults = CompanySettings().model_dump()
     if not doc:
-        defaults = CompanySettings().model_dump()
         defaults["key"] = SETTINGS_KEY
         await db.settings.insert_one(defaults)
         defaults.pop("_id", None)
-        doc = defaults
+        return defaults
+    # merge new default fields that don't exist on existing doc
+    missing = {k: v for k, v in defaults.items() if k not in doc}
+    if missing:
+        await db.settings.update_one({"key": SETTINGS_KEY}, {"$set": missing})
+        doc.update(missing)
     return doc
 
 

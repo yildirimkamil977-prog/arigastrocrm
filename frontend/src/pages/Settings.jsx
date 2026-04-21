@@ -68,6 +68,7 @@ export default function Settings() {
             <div><Label>Vergi Dairesi</Label><Input value={form.tax_office} onChange={(e) => set("tax_office", e.target.value)} /></div>
             <div><Label>Vergi Numarası</Label><Input value={form.tax_number} onChange={(e) => set("tax_number", e.target.value)} /></div>
             <div className="md:col-span-2"><Label>Adres</Label><Textarea rows={2} value={form.address} onChange={(e) => set("address", e.target.value)} /></div>
+            <div className="md:col-span-2"><Label>Yetkili Kişi (Teklif PDF'inde imza olarak görünecek)</Label><Input value={form.authorized_person_name} onChange={(e) => set("authorized_person_name", e.target.value)} placeholder="Ad Soyad" data-testid="settings-authorized-person" /></div>
           </div>
         </TabsContent>
 
@@ -107,6 +108,11 @@ export default function Settings() {
               <p className="text-xs text-slate-500 mt-2">
                 Resend için <a className="text-brand underline" href="https://resend.com" target="_blank" rel="noreferrer">resend.com</a> üzerinden ücretsiz hesap açın, API anahtarınızı buraya yapıştırın.
               </p>
+              <div className="text-xs text-slate-500 mt-2 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                <b>Yanıtlar size gelsin:</b> Gönderilen e-postalarda <code>Reply-To</code> başlığı otomatik olarak <b>Firma sekmesindeki e-posta adresinize</b> ayarlanır; müşteri "Yanıtla" dediğinde cevabı siz alırsınız.
+                <br />
+                <b>Gönderen adresini kendi alan adınız yapmak için:</b> Resend panelinde <b>Domains</b> bölümünden kendi domaininizi (ör. <code>arigastro.com</code>) doğrulayın, sonra aşağıdaki "Gönderen E-posta" alanına <code>teklif@arigastro.com</code> gibi bir adres yazın.
+              </div>
             </div>
 
             {form.email_provider === "resend" ? (
@@ -129,7 +135,6 @@ export default function Settings() {
 
         <TabsContent value="quote">
           <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><Label>Varsayılan KDV Oranı (%)</Label><Input type="number" step="0.01" value={form.default_vat_rate} onChange={(e) => set("default_vat_rate", Number(e.target.value) || 0)} /></div>
             <div><Label>Varsayılan Geçerlilik (gün)</Label><Input type="number" value={form.default_validity_days} onChange={(e) => set("default_validity_days", Number(e.target.value) || 30)} /></div>
             <div className="md:col-span-2"><Label>Varsayılan Teklif Notları</Label><Textarea rows={4} value={form.default_quote_notes} onChange={(e) => set("default_quote_notes", e.target.value)} placeholder="Ödeme koşulları, teslimat süresi, garanti..." /></div>
           </div>

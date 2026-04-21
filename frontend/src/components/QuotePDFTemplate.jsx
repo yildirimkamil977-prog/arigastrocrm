@@ -8,10 +8,11 @@ import { formatDate, formatMoney } from "../lib/api";
 export default function QuotePDFTemplate({ quote, customer, company }) {
   const {
     quote_no, issue_date, valid_until, currency, items = [],
-    subtotal = 0, vat_amount = 0, total_with_vat = 0,
-    discount_amount = 0, grand_total = 0, vat_rate = 0, discount_rate = 0,
+    subtotal = 0,
+    discount_amount = 0, grand_total = 0, discount_rate = 0,
     notes,
   } = quote || {};
+  const authorizedName = company?.authorized_person_name || "";
 
   return (
     <div
@@ -126,11 +127,9 @@ export default function QuotePDFTemplate({ quote, customer, company }) {
       <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
         <table style={{ fontSize: 11, minWidth: 280 }}>
           <tbody>
-            <tr><td style={{ padding: "4px 10px", color: "#475569" }}>Ara Toplam</td><td style={{ padding: "4px 10px", textAlign: "right" }}>{formatMoney(subtotal, currency)}</td></tr>
-            <tr><td style={{ padding: "4px 10px", color: "#475569" }}>KDV (%{vat_rate})</td><td style={{ padding: "4px 10px", textAlign: "right" }}>{formatMoney(vat_amount, currency)}</td></tr>
-            <tr style={{ borderTop: "1px solid #e2e8f0" }}>
-              <td style={{ padding: "6px 10px", fontWeight: 600 }}>KDV Dahil Toplam</td>
-              <td style={{ padding: "6px 10px", textAlign: "right", fontWeight: 600 }}>{formatMoney(total_with_vat, currency)}</td>
+            <tr>
+              <td style={{ padding: "4px 10px", color: "#475569" }}>Ara Toplam</td>
+              <td style={{ padding: "4px 10px", textAlign: "right" }}>{formatMoney(subtotal, currency)}</td>
             </tr>
             {Number(discount_rate) > 0 && (
               <tr>
@@ -139,7 +138,10 @@ export default function QuotePDFTemplate({ quote, customer, company }) {
               </tr>
             )}
             <tr style={{ background: "#0073c4", color: "#fff" }}>
-              <td style={{ padding: "10px", fontWeight: 700 }}>GENEL TOPLAM</td>
+              <td style={{ padding: "10px", fontWeight: 700, lineHeight: 1.25 }}>
+                GENEL TOPLAM
+                <div style={{ fontSize: 8, fontWeight: 500, opacity: 0.9, letterSpacing: 1 }}>KDV DAHİL</div>
+              </td>
               <td style={{ padding: "10px", textAlign: "right", fontWeight: 700, fontSize: 13 }}>{formatMoney(grand_total, currency)}</td>
             </tr>
           </tbody>
@@ -163,8 +165,33 @@ export default function QuotePDFTemplate({ quote, customer, company }) {
         </div>
         <div style={{ textAlign: "right" }}>
           <div>Bu teklif {formatDate(valid_until)} tarihine kadar geçerlidir.</div>
-          <div style={{ marginTop: 14, borderTop: "1px solid #94a3b8", paddingTop: 3, display: "inline-block", minWidth: 160 }}>
-            Yetkili İmza
+          <div style={{ marginTop: 4 }}>
+            <div
+              style={{
+                fontFamily: "'Whisper', cursive",
+                fontSize: 38,
+                color: "#0073c4",
+                lineHeight: 1,
+                marginTop: 14,
+                minHeight: 42,
+              }}
+            >
+              {authorizedName}
+            </div>
+            <div
+              style={{
+                borderTop: "1px solid #94a3b8",
+                paddingTop: 3,
+                marginTop: 2,
+                display: "inline-block",
+                minWidth: 180,
+                fontSize: 10,
+                color: "#334155",
+              }}
+            >
+              <b>{authorizedName}</b>
+              <div style={{ fontSize: 8, color: "#64748b", marginTop: 1 }}>Yetkili İmza</div>
+            </div>
           </div>
         </div>
       </div>

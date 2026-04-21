@@ -30,7 +30,6 @@ export default function QuoteForm() {
   const [customerId, setCustomerId] = useState(searchParams.get("customer") || "");
   const [customerQuery, setCustomerQuery] = useState("");
   const [currency, setCurrency] = useState("TRY");
-  const [vatRate, setVatRate] = useState(20);
   const [discountRate, setDiscountRate] = useState(0);
   const [validUntil, setValidUntil] = useState(plusDaysISO(30));
   const [notes, setNotes] = useState("");
@@ -51,7 +50,6 @@ export default function QuoteForm() {
         const [c, s] = await Promise.all([api.get("/customers"), api.get("/settings")]);
         setCustomers(c.data);
         if (!isEdit && s.data) {
-          setVatRate(s.data.default_vat_rate ?? 20);
           setValidUntil(plusDaysISO(s.data.default_validity_days ?? 30));
           setNotes(s.data.default_quote_notes || "");
         }
@@ -60,7 +58,6 @@ export default function QuoteForm() {
           const d = q.data;
           setCustomerId(d.customer_id);
           setCurrency(d.currency);
-          setVatRate(d.vat_rate);
           setDiscountRate(d.discount_rate);
           setValidUntil((d.valid_until || "").slice(0, 10));
           setNotes(d.notes || "");
@@ -94,14 +91,10 @@ export default function QuoteForm() {
       const line = (Number(it.quantity) || 0) * (Number(it.unit_price) || 0);
       sub += line - line * ((Number(it.discount_percent) || 0) / 100);
     });
-    const vat = sub * ((Number(vatRate) || 0) / 100);
-    const totalWithVat = sub + vat;
-    const discAmount = totalWithVat * ((Number(discountRate) || 0) / 100);
-    const grand = totalWithVat - discAmount;
-    return {
-      subtotal: sub, vat, totalWithVat, discAmount, grand,
-    };
-  }, [items, vatRate, discountRate]);
+    const discAmount = sub * ((Number(discountRate) || 0) / 100);
+    const grand = sub - discAmount;
+    return { subtotal: sub, discAmount, grand };
+  }, [items, discountRate]);
 
   const addProduct = (p) => {
     setItems((xs) => [
@@ -154,7 +147,7 @@ export default function QuoteForm() {
       const payload = {
         customer_id: customerId,
         currency,
-        vat_rate: Number(vatRate) || 0,
+        vat_rate: 0,
         discount_rate: Number(discountRate) || 0,
         valid_until: validUntil,
         notes,
@@ -335,9 +328,9 @@ export default function QuoteForm() {
             <div><Label>Geçerlilik Tarihi</Label>
               <Input type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} data-testid="quote-valid-until" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>KDV (%)</Label><Input type="number" step="0.01" value={vatRate} onChange={(e) => setVatRate(e.target.value)} data-testid="quote-vat-rate" /></div>
-              <div><Label>İskonto (%)</Label><Input type="number" step="0.01" value={discountRate} onChange={(e) => setDiscountRate(e.target.value)} data-testid="quote-discount-rate" /></div>
+            <div>
+              <Label>İskonto (%) <span className="text-xs text-slate-500 font-normal">(KDV dahil toplam üzerinden)</span></Label>
+              <Input type="number" step="0.01" value={discountRate} onChange={(e) => setDiscountRate(e.target.value)} data-testid="quote-discount-rate" />
             </div>
             <div><Label>Durum</Label>
               <Select value={status} onValueChange={setStatus}>
@@ -356,13 +349,14 @@ export default function QuoteForm() {
           <section className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 sticky top-4" data-testid="quote-totals">
             <h3 className="font-heading font-semibold mb-4">Toplam</h3>
             <Row label="Ara Toplam" value={formatMoney(totals.subtotal, currency)} />
-            <Row label={`KDV (%${vatRate})`} value={formatMoney(totals.vat, currency)} />
-            <Row label="KDV Dahil Toplam" value={formatMoney(totals.totalWithVat, currency)} bold />
             {Number(discountRate) > 0 && (
               <Row label={`İskonto (%${discountRate})`} value={`- ${formatMoney(totals.discAmount, currency)}`} accent="red" />
             )}
-            <div className="mt-3 pt-3 border-t border-slate-200 flex items-center justify-between">
-              <div className="text-sm text-slate-500">Genel Toplam</div>
+            <div className="mt-3 pt-3 border-t border-slate-200 flex items-end justify-between">
+              <div>
+                <div className="text-sm text-slate-500 leading-tight">Genel Toplam</div>
+                <div className="text-[10px] uppercase tracking-wider text-slate-400 mt-0.5">KDV Dahil</div>
+              </div>
               <div className="font-heading text-2xl font-semibold text-brand">{formatMoney(totals.grand, currency)}</div>
             </div>
           </section>

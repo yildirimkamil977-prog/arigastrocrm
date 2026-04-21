@@ -19,7 +19,7 @@ from routes.auth_routes import build_auth_router
 from routes.users import build_users_router
 from routes.customers import build_customers_router
 from routes.products import build_products_router
-from routes.quotes import build_quotes_router
+from routes.quotes import build_quotes_router, build_public_pdf_router
 from routes.settings import build_settings_router, get_settings_doc
 from feed_sync import start_daily_scheduler
 
@@ -47,6 +47,7 @@ api_router.include_router(build_users_router(db))
 api_router.include_router(build_customers_router(db))
 api_router.include_router(build_products_router(db))
 api_router.include_router(build_quotes_router(db))
+api_router.include_router(build_public_pdf_router(db))
 api_router.include_router(build_settings_router(db))
 
 app.include_router(api_router)

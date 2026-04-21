@@ -27,6 +27,7 @@ export default function QuoteForm() {
   const isEdit = Boolean(id);
 
   const [customers, setCustomers] = useState([]);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [customerId, setCustomerId] = useState(searchParams.get("customer") || "");
   const [customerQuery, setCustomerQuery] = useState("");
   const [currency, setCurrency] = useState("TRY");
@@ -47,8 +48,7 @@ export default function QuoteForm() {
     (async () => {
       setLoading(true);
       try {
-        const [c, s] = await Promise.all([api.get("/customers"), api.get("/settings")]);
-        setCustomers(c.data);
+        const s = await api.get("/settings");
         if (!isEdit && s.data) {
           setValidUntil(plusDaysISO(s.data.default_validity_days ?? 30));
           setNotes(s.data.default_quote_notes || "");
@@ -57,12 +57,16 @@ export default function QuoteForm() {
           const q = await api.get(`/quotes/${id}`);
           const d = q.data;
           setCustomerId(d.customer_id);
+          setSelectedCustomer(d.customer || null);
           setCurrency(d.currency);
           setDiscountRate(d.discount_rate);
           setValidUntil((d.valid_until || "").slice(0, 10));
           setNotes(d.notes || "");
           setStatus(d.status);
           setItems(d.items || []);
+        } else if (searchParams.get("customer")) {
+          const pre = await api.get(`/customers/${searchParams.get("customer")}`);
+          setSelectedCustomer(pre.data);
         }
       } catch (e) {
         toast.error(formatApiError(e));
@@ -72,6 +76,18 @@ export default function QuoteForm() {
     })();
     // eslint-disable-next-line
   }, [id]);
+
+  // Customer search (live, server-side)
+  useEffect(() => {
+    if (!customerQuery || customerQuery.length < 2) { setCustomers([]); return; }
+    const t = setTimeout(async () => {
+      try {
+        const r = await api.get("/customers", { params: { search: customerQuery, page_size: 20 } });
+        setCustomers(r.data.items || []);
+      } catch { /* ignore */ }
+    }, 250);
+    return () => clearTimeout(t);
+  }, [customerQuery]);
 
   // Product search
   useEffect(() => {
@@ -127,17 +143,7 @@ export default function QuoteForm() {
   };
   const removeItem = (idx) => setItems((xs) => xs.filter((_, i) => i !== idx));
 
-  const filteredCustomers = customers.filter((c) => {
-    if (!customerQuery) return true;
-    const q = customerQuery.toLowerCase();
-    return (
-      c.company_name?.toLowerCase().includes(q) ||
-      c.tax_number?.toLowerCase().includes(q) ||
-      c.phone?.toLowerCase().includes(q)
-    );
-  });
-
-  const selectedCustomer = customers.find((c) => c.id === customerId);
+  const filteredCustomers = customers;
 
   const save = async () => {
     if (!customerId) { toast.error("Müşteri seçiniz"); return; }
@@ -206,7 +212,7 @@ export default function QuoteForm() {
                   <button
                     key={c.id}
                     type="button"
-                    onClick={() => { setCustomerId(c.id); setCustomerQuery(""); }}
+                    onClick={() => { setCustomerId(c.id); setSelectedCustomer(c); setCustomerQuery(""); }}
                     className="w-full text-left px-4 py-2 hover:bg-slate-50 border-b border-slate-100 last:border-0"
                     data-testid={`quote-customer-option-${c.id}`}
                   >
@@ -229,7 +235,7 @@ export default function QuoteForm() {
                     {selectedCustomer.email ? ` · ${selectedCustomer.email}` : ""}
                   </div>
                 </div>
-                <button type="button" onClick={() => setCustomerId("")} className="text-slate-500 hover:text-slate-900">
+                <button type="button" onClick={() => { setCustomerId(""); setSelectedCustomer(null); }} className="text-slate-500 hover:text-slate-900">
                   <X size={16} />
                 </button>
               </div>

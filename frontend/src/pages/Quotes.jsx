@@ -58,12 +58,12 @@ export default function Quotes() {
         </Link>
       </PageHeader>
 
-      <div className="bg-white border border-slate-200 rounded-xl p-4 mb-4 grid grid-cols-1 md:grid-cols-5 gap-3">
-        <div className="md:col-span-2 relative">
+      <div className="bg-white border border-slate-200 rounded-xl p-4 mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+        <div className="sm:col-span-2 relative">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <Input
             className="pl-9"
-            placeholder="Teklif no, müşteri adı, vergi no ile ara…"
+            placeholder="Teklif no, müşteri adı, vergi no…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             data-testid="quote-search-input"
@@ -89,10 +89,8 @@ export default function Quotes() {
             ))}
           </SelectContent>
         </Select>
-        <div className="flex gap-2">
-          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-        </div>
+        <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} placeholder="Başlangıç" />
+        <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} placeholder="Bitiş" />
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">

@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users2, FileText, Package, Settings as SettingsIcon,
-  UserCog, LogOut, ChevronRight,
+  UserCog, LogOut,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
@@ -20,18 +20,23 @@ const adminLinks = [
   { to: "/ayarlar", label: "Ayarlar", icon: SettingsIcon, testid: "nav-settings" },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ onNavigate }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const isAdmin = user?.role === "admin";
 
   const handleLogout = async () => {
     await logout();
+    if (onNavigate) onNavigate();
     navigate("/login", { replace: true });
   };
 
+  const handleLinkClick = () => {
+    if (onNavigate) onNavigate();
+  };
+
   return (
-    <aside className="w-64 bg-white border-r border-slate-200 flex flex-col h-screen sticky top-0" data-testid="sidebar">
+    <aside className="w-64 bg-white border-r border-slate-200 flex flex-col h-full lg:h-screen lg:sticky lg:top-0" data-testid="sidebar">
       <div className="h-16 px-5 flex items-center border-b border-slate-200">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-brand text-white flex items-center justify-center font-heading font-bold text-sm">
@@ -51,6 +56,7 @@ export default function Sidebar() {
             key={l.to}
             to={l.to}
             end={l.to === "/"}
+            onClick={handleLinkClick}
             data-testid={l.testid}
             className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
           >
@@ -66,6 +72,7 @@ export default function Sidebar() {
               <NavLink
                 key={l.to}
                 to={l.to}
+                onClick={handleLinkClick}
                 data-testid={l.testid}
                 className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
               >
@@ -79,7 +86,7 @@ export default function Sidebar() {
 
       <div className="border-t border-slate-200 p-3">
         <div className="flex items-center gap-3 px-3 py-2 mb-2" data-testid="current-user">
-          <div className="w-9 h-9 rounded-full bg-brand-light text-brand font-heading font-semibold flex items-center justify-center">
+          <div className="w-9 h-9 rounded-full bg-brand-light text-brand font-heading font-semibold flex items-center justify-center shrink-0">
             {(user?.name || "?").charAt(0).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">

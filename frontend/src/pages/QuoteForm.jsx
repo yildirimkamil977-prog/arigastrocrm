@@ -346,7 +346,7 @@ export default function QuoteForm() {
             </div>
           </section>
 
-          <section className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 sticky top-4" data-testid="quote-totals">
+          <section className="bg-white border border-slate-200 rounded-xl shadow-sm p-4 sm:p-6 lg:sticky lg:top-4" data-testid="quote-totals">
             <h3 className="font-heading font-semibold mb-4">Toplam</h3>
             <Row label="Ara Toplam" value={formatMoney(totals.subtotal, currency)} />
             {Number(discountRate) > 0 && (

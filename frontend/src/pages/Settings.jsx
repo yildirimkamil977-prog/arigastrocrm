@@ -48,13 +48,15 @@ export default function Settings() {
       </PageHeader>
 
       <Tabs defaultValue="company">
-        <TabsList>
-          <TabsTrigger value="company" data-testid="tab-company">Firma</TabsTrigger>
-          <TabsTrigger value="bank" data-testid="tab-bank">Banka</TabsTrigger>
-          <TabsTrigger value="social" data-testid="tab-social">Sosyal Medya</TabsTrigger>
-          <TabsTrigger value="email" data-testid="tab-email">E-posta</TabsTrigger>
-          <TabsTrigger value="quote" data-testid="tab-quote">Teklif Varsayılanları</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-1 px-1">
+          <TabsList className="w-max">
+            <TabsTrigger value="company" data-testid="tab-company">Firma</TabsTrigger>
+            <TabsTrigger value="bank" data-testid="tab-bank">Banka</TabsTrigger>
+            <TabsTrigger value="social" data-testid="tab-social">Sosyal Medya</TabsTrigger>
+            <TabsTrigger value="email" data-testid="tab-email">E-posta</TabsTrigger>
+            <TabsTrigger value="quote" data-testid="tab-quote">Teklif Varsayılanları</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="company">
           <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 grid grid-cols-1 md:grid-cols-2 gap-4">

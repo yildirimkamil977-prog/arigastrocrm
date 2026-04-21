@@ -110,6 +110,7 @@ export default function Users() {
       </PageHeader>
 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm text-left">
           <thead className="bg-slate-50 text-slate-500 font-medium uppercase text-xs tracking-wider">
             <tr>
@@ -142,6 +143,7 @@ export default function Users() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

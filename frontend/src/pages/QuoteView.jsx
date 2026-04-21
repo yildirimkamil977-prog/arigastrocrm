@@ -289,8 +289,10 @@ ${c.data.company_name || "Arıgastro"}`);
 
       {/* PDF preview */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <div ref={pdfRef} className="flex justify-center p-4 overflow-auto" style={{ background: "#e2e8f0" }}>
-          <QuotePDFTemplate quote={quote} customer={customer} company={company} />
+        <div ref={pdfRef} className="flex justify-center p-2 sm:p-4 overflow-auto" style={{ background: "#e2e8f0" }}>
+          <div style={{ minWidth: "210mm" }}>
+            <QuotePDFTemplate quote={quote} customer={customer} company={company} />
+          </div>
         </div>
       </div>
     </div>

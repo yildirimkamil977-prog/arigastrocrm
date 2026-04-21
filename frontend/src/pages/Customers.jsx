@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, formatApiError, formatDate } from "../lib/api";
 import PageHeader from "../components/PageHeader";
@@ -20,6 +20,7 @@ const PAGE_SIZE = 20;
 
 export default function Customers() {
   const [rows, setRows] = useState([]);
+  const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -29,12 +30,15 @@ export default function Customers() {
   const [editing, setEditing] = useState(null);
   const [page, setPage] = useState(1);
 
-  const load = async () => {
+  const load = async (targetPage = page) => {
     setLoading(true);
     try {
-      const r = await api.get("/customers", { params: { search, date_from: dateFrom, date_to: dateTo } });
-      setRows(r.data);
-      setPage(1);
+      const r = await api.get("/customers", {
+        params: { search, date_from: dateFrom, date_to: dateTo, page: targetPage, page_size: PAGE_SIZE },
+      });
+      setRows(r.data.items || []);
+      setTotal(r.data.total || 0);
+      setPage(targetPage);
     } catch (e) {
       toast.error(formatApiError(e));
     } finally {
@@ -42,17 +46,35 @@ export default function Customers() {
     }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { load(1); /* eslint-disable-next-line */ }, []);
   useEffect(() => {
-    const t = setTimeout(load, 300);
+    const t = setTimeout(() => load(1), 300);
     return () => clearTimeout(t);
     // eslint-disable-next-line
   }, [search, dateFrom, dateTo]);
 
-  const pagedRows = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    return rows.slice(start, start + PAGE_SIZE);
-  }, [rows, page]);
+  const remove = async (id, hasQuotes) => {
+    const hint = hasQuotes
+      ? "Bu müşterinin kayıtlı teklifleri var. TÜM teklifleri ile birlikte silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
+      : "Bu müşteriyi silmek istediğinize emin misiniz?";
+    if (!window.confirm(hint)) return;
+    try {
+      try {
+        await api.delete(`/customers/${id}`);
+      } catch (e) {
+        if (e?.response?.status === 409) {
+          if (!window.confirm(formatApiError(e) + " Yine de teklifleri ile birlikte silinsin mi?")) return;
+          await api.delete(`/customers/${id}`, { params: { force: true } });
+        } else {
+          throw e;
+        }
+      }
+      toast.success("Müşteri silindi");
+      load(page);
+    } catch (e) {
+      toast.error(formatApiError(e));
+    }
+  };
 
   const openNew = () => { setEditing(null); setForm(EMPTY); setOpen(true); };
   const openEdit = (c) => { setEditing(c); setForm({ ...EMPTY, ...c }); setOpen(true); };
@@ -74,16 +96,7 @@ export default function Customers() {
     }
   };
 
-  const remove = async (id) => {
-    if (!window.confirm("Bu müşteriyi silmek istediğinize emin misiniz?")) return;
-    try {
-      await api.delete(`/customers/${id}`);
-      toast.success("Müşteri silindi");
-      load();
-    } catch (e) {
-      toast.error(formatApiError(e));
-    }
-  };
+  const remove_old_disabled = null; // cleaned up, using enhanced remove above
 
   return (
     <div>
@@ -159,7 +172,7 @@ export default function Customers() {
               {!loading && rows.length === 0 && (
                 <tr><td colSpan={7} className="p-8 text-center text-slate-400">Müşteri bulunamadı.</td></tr>
               )}
-              {pagedRows.map((c) => (
+              {rows.map((c) => (
                 <tr key={c.id} className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
                   <td className="px-6 py-3">
                     <Link to={`/musteriler/${c.id}`} className="font-medium text-slate-900 hover:text-brand" data-testid={`customer-link-${c.id}`}>
@@ -186,7 +199,7 @@ export default function Customers() {
             </tbody>
           </table>
         </div>
-        <Pagination page={page} pageSize={PAGE_SIZE} total={rows.length} onPageChange={setPage} />
+        <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={(p) => load(p)} />
       </div>
     </div>
   );

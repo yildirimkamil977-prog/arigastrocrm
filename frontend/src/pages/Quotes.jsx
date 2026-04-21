@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, formatApiError, formatDate, formatMoney } from "../lib/api";
 import PageHeader from "../components/PageHeader";
@@ -17,6 +17,7 @@ const PAGE_SIZE = 20;
 
 export default function Quotes() {
   const [rows, setRows] = useState([]);
+  const [total, setTotal] = useState(0);
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
@@ -26,14 +27,15 @@ export default function Quotes() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
 
-  const load = async () => {
+  const load = async (targetPage = page) => {
     setLoading(true);
     try {
       const r = await api.get("/quotes", {
-        params: { search, status, created_by: createdBy, date_from: dateFrom, date_to: dateTo },
+        params: { search, status, created_by: createdBy, date_from: dateFrom, date_to: dateTo, page: targetPage, page_size: PAGE_SIZE },
       });
-      setRows(r.data);
-      setPage(1);
+      setRows(r.data.items || []);
+      setTotal(r.data.total || 0);
+      setPage(targetPage);
     } catch (e) {
       toast.error(formatApiError(e));
     } finally {
@@ -43,19 +45,14 @@ export default function Quotes() {
 
   useEffect(() => {
     api.get("/users").then((r) => setUsers(r.data)).catch(() => setUsers([]));
-    load();
+    load(1);
     /* eslint-disable-next-line */
   }, []);
   useEffect(() => {
-    const t = setTimeout(load, 300);
+    const t = setTimeout(() => load(1), 300);
     return () => clearTimeout(t);
     // eslint-disable-next-line
   }, [search, status, createdBy, dateFrom, dateTo]);
-
-  const pagedRows = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    return rows.slice(start, start + PAGE_SIZE);
-  }, [rows, page]);
 
   return (
     <div>
@@ -119,7 +116,7 @@ export default function Quotes() {
             <tbody>
               {loading && <tr><td colSpan={7} className="p-8 text-center text-slate-400">Yükleniyor…</td></tr>}
               {!loading && rows.length === 0 && <tr><td colSpan={7} className="p-8 text-center text-slate-400">Teklif bulunamadı.</td></tr>}
-              {pagedRows.map((q) => (
+              {rows.map((q) => (
                 <tr key={q.id} className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
                   <td className="px-6 py-3 font-mono text-xs">
                     <Link to={`/teklifler/${q.id}`} className="text-brand hover:underline font-medium" data-testid={`quote-link-${q.id}`}>
@@ -145,7 +142,7 @@ export default function Quotes() {
             </tbody>
           </table>
         </div>
-        <Pagination page={page} pageSize={PAGE_SIZE} total={rows.length} onPageChange={setPage} />
+        <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={(p) => load(p)} />
       </div>
     </div>
   );

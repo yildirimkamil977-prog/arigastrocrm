@@ -5,11 +5,14 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
 
+import asyncio
 import os
 import logging
-from datetime import datetime, timezone
+import traceback
+from datetime import datetime, timezone, timedelta
 
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, Request
+from fastapi.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 
@@ -21,17 +24,17 @@ from routes.customers import build_customers_router
 from routes.products import build_products_router
 from routes.quotes import build_quotes_router, build_public_pdf_router
 from routes.settings import build_settings_router, get_settings_doc
-from feed_sync import start_daily_scheduler
+from feed_sync import start_daily_scheduler, sync_products
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 # MongoDB
 mongo_url = os.environ["MONGO_URL"]
-client = AsyncIOMotorClient(mongo_url)
+client = AsyncIOMotorClient(mongo_url, maxPoolSize=50, retryWrites=True)
 db = client[os.environ["DB_NAME"]]
 
-app = FastAPI(title="ArıCRM API")
+app = FastAPI(title="ArıCRM API", version="1.0")
 
 api_router = APIRouter(prefix="/api")
 
@@ -39,6 +42,16 @@ api_router = APIRouter(prefix="/api")
 @api_router.get("/")
 async def root():
     return {"service": "ArıCRM", "status": "ok"}
+
+
+@api_router.get("/health")
+async def health():
+    """Health check for external monitors (UptimeRobot, etc.)."""
+    try:
+        await db.command("ping")
+        return {"status": "healthy", "db": "ok", "at": datetime.now(timezone.utc).isoformat()}
+    except Exception as e:
+        return JSONResponse(status_code=503, content={"status": "unhealthy", "error": str(e)[:200]})
 
 
 # register routers
@@ -63,6 +76,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """Global safety net: log stack, return sanitized 500 so secrets never leak."""
+    logger.error(
+        "Unhandled error on %s %s: %s\n%s",
+        request.method, request.url.path, exc, traceback.format_exc()[-2000:],
+    )
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Beklenmedik bir hata oluştu. Lütfen tekrar deneyin."},
+    )
 
 
 async def seed_admin():
@@ -90,28 +116,75 @@ async def seed_admin():
             logger.info("Admin password updated from .env")
 
 
-@app.on_event("startup")
-async def startup():
-    # indexes
+async def ensure_indexes():
+    """Create all indexes. Idempotent."""
     await db.users.create_index("email", unique=True)
     await db.users.create_index("id", unique=True)
     await db.customers.create_index("id", unique=True)
     await db.customers.create_index("company_name")
     await db.customers.create_index("tax_number")
+    await db.customers.create_index("created_at")
     await db.products.create_index("id", unique=True)
     await db.products.create_index("code")
     await db.products.create_index([("title", "text"), ("code", "text")])
     await db.quotes.create_index("id", unique=True)
     await db.quotes.create_index("quote_no", unique=True)
     await db.quotes.create_index("customer_id")
+    await db.quotes.create_index("created_by")
     await db.quotes.create_index("status")
     await db.quotes.create_index("created_at")
+    await db.quotes.create_index("valid_until")
 
+    # TTL indexes — auto-cleanup to prevent unbounded growth
+    # Login attempts: auto-delete after 1 hour
+    try:
+        await db.login_attempts.create_index("at_dt", expireAfterSeconds=3600)
+    except Exception:
+        pass
+    # Quote share links: auto-delete after 90 days
+    try:
+        await db.quote_shares.create_index("created_dt", expireAfterSeconds=90 * 86400)
+    except Exception:
+        pass
+    # Sync logs: keep 60 days
+    try:
+        await db.sync_logs.create_index("at_dt", expireAfterSeconds=60 * 86400)
+    except Exception:
+        pass
+    # Email logs: keep 1 year
+    try:
+        await db.email_logs.create_index("at_dt", expireAfterSeconds=365 * 86400)
+    except Exception:
+        pass
+
+
+async def auto_expire_quotes_loop():
+    """Every 1h, mark quotes as 'suresi_doldu' if valid_until < today and status is sent/draft."""
+    while True:
+        try:
+            today_iso = datetime.now(timezone.utc).date().isoformat()
+            res = await db.quotes.update_many(
+                {
+                    "status": {"$in": ["taslak", "gonderildi"]},
+                    "valid_until": {"$lt": today_iso},
+                },
+                {"$set": {"status": "suresi_doldu", "updated_at": datetime.now(timezone.utc).isoformat()}},
+            )
+            if res.modified_count:
+                logger.info(f"Auto-expired {res.modified_count} quote(s)")
+        except Exception:
+            logger.exception("auto-expire loop error")
+        await asyncio.sleep(3600)
+
+
+@app.on_event("startup")
+async def startup():
+    await ensure_indexes()
     await seed_admin()
-    # ensure default settings
     await get_settings_doc(db)
-    # start daily feed sync
+    # background tasks
     await start_daily_scheduler(db)
+    asyncio.create_task(auto_expire_quotes_loop())
     logger.info("ArıCRM API started")
 
 

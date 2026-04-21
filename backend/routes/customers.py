@@ -17,6 +17,8 @@ def build_customers_router(db):
         city: str = Query(""),
         date_from: str = Query(""),
         date_to: str = Query(""),
+        page: int = Query(1, ge=1),
+        page_size: int = Query(20, ge=1, le=200),
         user=Depends(current_user),
     ):
         q: dict = {}
@@ -34,8 +36,10 @@ def build_customers_router(db):
             q.setdefault("created_at", {})["$gte"] = date_from
         if date_to:
             q.setdefault("created_at", {})["$lte"] = date_to + "T23:59:59"
-        items = await db.customers.find(q, {"_id": 0}).sort("created_at", -1).to_list(1000)
-        return items
+        total = await db.customers.count_documents(q)
+        skip = (page - 1) * page_size
+        items = await db.customers.find(q, {"_id": 0}).sort("created_at", -1).skip(skip).limit(page_size).to_list(page_size)
+        return {"items": items, "total": total, "page": page, "page_size": page_size}
 
     @router.get("/{customer_id}")
     async def get_customer(customer_id: str, user=Depends(current_user)):
@@ -66,11 +70,23 @@ def build_customers_router(db):
         return c
 
     @router.delete("/{customer_id}")
-    async def delete_customer(customer_id: str, user=Depends(current_user)):
+    async def delete_customer(
+        customer_id: str,
+        force: bool = Query(False, description="True: teklifleri dahil cascade sil"),
+        user=Depends(current_user),
+    ):
+        quote_count = await db.quotes.count_documents({"customer_id": customer_id})
+        if quote_count > 0 and not force:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Bu müşterinin {quote_count} adet teklifi var. Silmek için onayınız gerekir.",
+            )
+        if quote_count > 0:
+            await db.quotes.delete_many({"customer_id": customer_id})
         res = await db.customers.delete_one({"id": customer_id})
         if res.deleted_count == 0:
             raise HTTPException(status_code=404, detail="Müşteri bulunamadı")
-        return {"ok": True}
+        return {"ok": True, "deleted_quotes": quote_count}
 
     @router.get("/{customer_id}/quotes")
     async def customer_quotes(customer_id: str, user=Depends(current_user)):

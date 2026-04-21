@@ -80,28 +80,24 @@ def build_quotes_router(db):
         created_by: str = Query(""),
         date_from: str = Query(""),
         date_to: str = Query(""),
+        page: int = Query(1, ge=1),
+        page_size: int = Query(20, ge=1, le=200),
         user=Depends(current_user),
     ):
-        q: dict = {}
+        base: dict = {}
         if status:
-            q["status"] = status
+            base["status"] = status
         if customer_id:
-            q["customer_id"] = customer_id
+            base["customer_id"] = customer_id
         if created_by:
-            q["created_by"] = created_by
+            base["created_by"] = created_by
         if date_from:
-            q.setdefault("issue_date", {})["$gte"] = date_from
+            base.setdefault("issue_date", {})["$gte"] = date_from
         if date_to:
-            q.setdefault("issue_date", {})["$lte"] = date_to + "T23:59:59"
-        if search:
-            # match by quote_no; will additionally filter by customer name later
-            q["$or"] = [
-                {"quote_no": {"$regex": search, "$options": "i"}},
-                {"notes": {"$regex": search, "$options": "i"}},
-            ]
-        quotes = await db.quotes.find(q, {"_id": 0}).sort("created_at", -1).to_list(2000)
+            base.setdefault("issue_date", {})["$lte"] = date_to + "T23:59:59"
 
-        # If search provided, also include quotes whose customer matches
+        # Build search: OR between direct quote fields + customers matching search
+        filter_q = dict(base)
         if search:
             matching_customers = await db.customers.find(
                 {
@@ -112,22 +108,21 @@ def build_quotes_router(db):
                 },
                 {"_id": 0, "id": 1},
             ).to_list(1000)
-            customer_ids = [c["id"] for c in matching_customers]
-            if customer_ids:
-                extra_q = {"customer_id": {"$in": customer_ids}}
-                if status:
-                    extra_q["status"] = status
-                if created_by:
-                    extra_q["created_by"] = created_by
-                extras = await db.quotes.find(extra_q, {"_id": 0}).to_list(2000)
-                # merge unique
-                existing_ids = {x["id"] for x in quotes}
-                for e in extras:
-                    if e["id"] not in existing_ids:
-                        quotes.append(e)
+            cust_ids = [c["id"] for c in matching_customers]
+            filter_q["$or"] = [
+                {"quote_no": {"$regex": search, "$options": "i"}},
+                {"notes": {"$regex": search, "$options": "i"}},
+            ]
+            if cust_ids:
+                filter_q["$or"].append({"customer_id": {"$in": cust_ids}})
 
-        # attach minimal customer info
-        cust_ids = list({q_.get("customer_id") for q_ in quotes if q_.get("customer_id")})
+        total = await db.quotes.count_documents(filter_q)
+        skip = (page - 1) * page_size
+        quotes = await db.quotes.find(filter_q, {"_id": 0}).sort("created_at", -1).skip(skip).limit(page_size).to_list(page_size)
+
+        # attach customer + creator info
+        cust_ids = list({q.get("customer_id") for q in quotes if q.get("customer_id")})
+        cust_map = {}
         if cust_ids:
             cust_map = {
                 c["id"]: c
@@ -136,11 +131,8 @@ def build_quotes_router(db):
                     {"_id": 0, "id": 1, "company_name": 1, "tax_number": 1},
                 ).to_list(len(cust_ids))
             }
-            for q_ in quotes:
-                q_["customer"] = cust_map.get(q_.get("customer_id"))
-
-        # attach creator (hazırlayan) info
-        creator_ids = list({q_.get("created_by") for q_ in quotes if q_.get("created_by")})
+        creator_ids = list({q.get("created_by") for q in quotes if q.get("created_by")})
+        creator_map = {}
         if creator_ids:
             creator_map = {
                 u["id"]: u
@@ -149,12 +141,11 @@ def build_quotes_router(db):
                     {"_id": 0, "id": 1, "name": 1, "email": 1, "role": 1},
                 ).to_list(len(creator_ids))
             }
-            for q_ in quotes:
-                q_["creator"] = creator_map.get(q_.get("created_by"))
+        for q in quotes:
+            q["customer"] = cust_map.get(q.get("customer_id"))
+            q["creator"] = creator_map.get(q.get("created_by"))
 
-        # sort by created_at desc
-        quotes.sort(key=lambda x: x.get("created_at", ""), reverse=True)
-        return quotes
+        return {"items": quotes, "total": total, "page": page, "page_size": page_size}
 
     @router.get("/stats")
     async def quote_stats(user=Depends(current_user)):
@@ -355,7 +346,9 @@ def build_quotes_router(db):
             )
             await db.email_logs.insert_one({
                 "quote_id": quote_id, "recipient": body.recipient_email,
-                "at": datetime.now(timezone.utc).isoformat(), "provider": "resend",
+                "at": datetime.now(timezone.utc).isoformat(),
+                "at_dt": datetime.now(timezone.utc),
+                "provider": "resend",
                 "email_id": result.get("id"),
             })
             return {"ok": True, "email_id": result.get("id"), "provider": "resend"}
@@ -405,7 +398,9 @@ def build_quotes_router(db):
             )
             await db.email_logs.insert_one({
                 "quote_id": quote_id, "recipient": body.recipient_email,
-                "at": datetime.now(timezone.utc).isoformat(), "provider": "smtp",
+                "at": datetime.now(timezone.utc).isoformat(),
+                "at_dt": datetime.now(timezone.utc),
+                "provider": "smtp",
             })
             return {"ok": True, "provider": "smtp"}
         else:
@@ -422,12 +417,14 @@ def build_quotes_router(db):
         except Exception:
             raise HTTPException(status_code=400, detail="Geçersiz PDF verisi")
         token = secrets.token_urlsafe(12)
+        now_dt = datetime.now(timezone.utc)
         await db.quote_shares.insert_one({
             "token": token,
             "quote_id": quote_id,
             "quote_no": q.get("quote_no"),
             "pdf_b64": base64.b64encode(pdf_bytes).decode("ascii"),
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": now_dt.isoformat(),
+            "created_dt": now_dt,
         })
         public_base = os.environ.get("PUBLIC_BASE_URL", "").rstrip("/")
         url = f"{public_base}/api/public/quotes/{token}/pdf" if public_base else f"/api/public/quotes/{token}/pdf"

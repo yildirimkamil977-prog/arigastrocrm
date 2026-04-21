@@ -127,6 +127,7 @@ async def sync_products(db) -> dict:
             "type": "products_feed",
             "count": ops,
             "at": datetime.now(timezone.utc).isoformat(),
+            "at_dt": datetime.now(timezone.utc),
             "success": True,
         })
         logger.info(f"Product feed sync complete: {ops} products")
@@ -137,6 +138,7 @@ async def sync_products(db) -> dict:
             "type": "products_feed",
             "count": 0,
             "at": datetime.now(timezone.utc).isoformat(),
+            "at_dt": datetime.now(timezone.utc),
             "success": False,
             "error": str(e),
         })

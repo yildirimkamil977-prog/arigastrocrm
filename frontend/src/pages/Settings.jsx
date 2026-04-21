@@ -51,6 +51,7 @@ export default function Settings() {
         <TabsList>
           <TabsTrigger value="company" data-testid="tab-company">Firma</TabsTrigger>
           <TabsTrigger value="bank" data-testid="tab-bank">Banka</TabsTrigger>
+          <TabsTrigger value="social" data-testid="tab-social">Sosyal Medya</TabsTrigger>
           <TabsTrigger value="email" data-testid="tab-email">E-posta</TabsTrigger>
           <TabsTrigger value="quote" data-testid="tab-quote">Teklif Varsayılanları</TabsTrigger>
         </TabsList>
@@ -75,6 +76,20 @@ export default function Settings() {
             <div><Label>Banka Adı</Label><Input value={form.bank_name} onChange={(e) => set("bank_name", e.target.value)} /></div>
             <div><Label>Hesap Sahibi</Label><Input value={form.bank_account_holder} onChange={(e) => set("bank_account_holder", e.target.value)} /></div>
             <div className="md:col-span-2"><Label>IBAN</Label><Input value={form.bank_iban} onChange={(e) => set("bank_iban", e.target.value)} /></div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="social">
+          <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2 text-sm text-slate-500">
+              Sosyal medya hesaplarınızın tam URL'lerini girin. Girilen bağlantılar teklif PDF'inin alt kısmında gösterilir.
+            </div>
+            <div><Label>Instagram</Label><Input value={form.social_instagram} onChange={(e) => set("social_instagram", e.target.value)} placeholder="https://instagram.com/arigastro" data-testid="settings-social-instagram" /></div>
+            <div><Label>Facebook</Label><Input value={form.social_facebook} onChange={(e) => set("social_facebook", e.target.value)} placeholder="https://facebook.com/arigastro" data-testid="settings-social-facebook" /></div>
+            <div><Label>Twitter / X</Label><Input value={form.social_twitter} onChange={(e) => set("social_twitter", e.target.value)} placeholder="https://x.com/arigastro" data-testid="settings-social-twitter" /></div>
+            <div><Label>LinkedIn</Label><Input value={form.social_linkedin} onChange={(e) => set("social_linkedin", e.target.value)} placeholder="https://linkedin.com/company/arigastro" data-testid="settings-social-linkedin" /></div>
+            <div><Label>YouTube</Label><Input value={form.social_youtube} onChange={(e) => set("social_youtube", e.target.value)} placeholder="https://youtube.com/@arigastro" data-testid="settings-social-youtube" /></div>
+            <div><Label>TikTok</Label><Input value={form.social_tiktok} onChange={(e) => set("social_tiktok", e.target.value)} placeholder="https://tiktok.com/@arigastro" data-testid="settings-social-tiktok" /></div>
           </div>
         </TabsContent>
 

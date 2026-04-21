@@ -146,6 +146,13 @@ class CompanySettings(BaseModel):
     bank_name: str = ""
     bank_iban: str = ""
     bank_account_holder: str = ""
+    # Social media
+    social_instagram: str = ""
+    social_facebook: str = ""
+    social_twitter: str = ""
+    social_linkedin: str = ""
+    social_youtube: str = ""
+    social_tiktok: str = ""
     # Email provider
     email_provider: str = "resend"  # resend | smtp
     resend_api_key: str = ""

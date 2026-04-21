@@ -168,6 +168,63 @@ export default function QuotePDFTemplate({ quote, customer, company }) {
           </div>
         </div>
       </div>
+
+      {/* Social media */}
+      <SocialStrip company={company} />
+    </div>
+  );
+}
+
+function SocialStrip({ company }) {
+  const links = [
+    { key: "social_instagram", label: "Instagram" },
+    { key: "social_facebook", label: "Facebook" },
+    { key: "social_twitter", label: "X" },
+    { key: "social_linkedin", label: "LinkedIn" },
+    { key: "social_youtube", label: "YouTube" },
+    { key: "social_tiktok", label: "TikTok" },
+  ].filter((l) => (company?.[l.key] || "").trim());
+
+  if (links.length === 0 && !company?.website) return null;
+
+  const display = (url) => {
+    try {
+      const u = new URL(url.startsWith("http") ? url : `https://${url}`);
+      return `${u.hostname.replace(/^www\./, "")}${u.pathname !== "/" ? u.pathname : ""}`;
+    } catch {
+      return url;
+    }
+  };
+
+  return (
+    <div
+      style={{
+        marginTop: 18,
+        padding: "10px 14px",
+        background: "#0073c4",
+        color: "#ffffff",
+        borderRadius: 6,
+        display: "flex",
+        flexWrap: "wrap",
+        gap: 14,
+        rowGap: 6,
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: 9,
+      }}
+    >
+      {company?.website && (
+        <span style={{ fontWeight: 600 }}>{display(company.website)}</span>
+      )}
+      {links.map((l, i) => (
+        <span key={l.key} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+          {(company?.website || i > 0) && (
+            <span style={{ opacity: 0.5, marginRight: 6 }}>·</span>
+          )}
+          <b>{l.label}:</b>
+          <span>{display(company[l.key])}</span>
+        </span>
+      ))}
     </div>
   );
 }

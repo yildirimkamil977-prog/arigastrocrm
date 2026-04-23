@@ -1,5 +1,3 @@
-version: "3.9"
-
 # ArıCRM Production Stack
 # Domain: arigastrocrm.com
 # Services: MongoDB + FastAPI (backend) + React build + Caddy (reverse proxy + auto HTTPS)

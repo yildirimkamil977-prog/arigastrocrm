@@ -10,8 +10,10 @@ ENV CI=true
 ENV NODE_OPTIONS=--max-old-space-size=2048
 ENV DISABLE_ESLINT_PLUGIN=true
 
-COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile --network-timeout 600000
+COPY package.json ./
+# yarn.lock is optional (wildcard won't fail if missing — some checkouts strip it)
+COPY yarn.lock* ./
+RUN yarn install --network-timeout 600000
 
 COPY . .
 

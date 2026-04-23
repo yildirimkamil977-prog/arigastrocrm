@@ -53,8 +53,23 @@ Turkish B2B CRM for **Arıgastro** (endüstriyel mutfak ekipmanları) focused on
 - Customer tags/segments + quote performance analytics.
 - Export customers/quotes to Excel.
 
+## Production Deployment (2026-04-23) 🚀
+- Target VPS: Hetzner CX22 (Ubuntu 24.04) — IP `91.98.43.11`, name `aricrm-prod`.
+- Domain: `arigastrocrm.com` (Resend verified ✅).
+- Deployment package created at `/app/deployment/`:
+  - `docker-compose.yml` — mongo + backend + frontend-builder + Caddy
+  - `Caddyfile` — reverse proxy + automatic Let's Encrypt HTTPS
+  - `deploy.sh` — one-shot Ubuntu bootstrap (Docker, UFW, fail2ban, build, start)
+  - `.env.example` — production env template
+  - `README.md` — Turkish step-by-step guide (DNS → SSH → .env → deploy → verify)
+- Dockerfiles live at `/app/backend/Dockerfile` and `/app/frontend/Dockerfile`.
+- Backend runs `uvicorn --workers 1` (APScheduler must not double-schedule).
+- Frontend built via multi-stage and served as static files from a shared volume by Caddy.
+
 ## Next Tasks
-- Show user a wow demo — login → create customer → create quote (with feed products) → download PDF.
+- User completes DNS A records (arigastrocrm.com + www → 91.98.43.11).
+- User SSHes into VPS, clones repo (via GitHub "Save to GitHub" or scp), edits .env, runs `bash deploy.sh`.
+- Post-deploy smoke test: login, create quote, email test via Resend.
 - Optional: upgrade date pickers to shadcn Calendar for better Turkish UX.
 - Optional: public quote share link for customer acceptance tracking.
 

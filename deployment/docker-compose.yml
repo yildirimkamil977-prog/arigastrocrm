@@ -1,0 +1,78 @@
+version: "3.9"
+
+# ArıCRM Production Stack
+# Domain: arigastrocrm.com
+# Services: MongoDB + FastAPI (backend) + React build + Caddy (reverse proxy + auto HTTPS)
+#
+# Layout assumption:
+#   /opt/aricrm/
+#     ├── backend/     (FastAPI source + Dockerfile)
+#     ├── frontend/    (React source + Dockerfile)
+#     └── deployment/  (this folder — compose + caddy + .env)
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - aricrm_net
+    # Not exposed to host — only reachable inside the docker network.
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    environment:
+      MONGO_URL: mongodb://mongo:27017
+      DB_NAME: ${DB_NAME}
+    depends_on:
+      - mongo
+    networks:
+      - aricrm_net
+    # Not exposed to host — Caddy proxies to it over the docker network.
+
+  frontend-builder:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_BACKEND_URL: https://${DOMAIN}
+    command: ["sh", "-c", "rm -rf /out/* && cp -r /app/build/. /out/ && echo 'Frontend built'"]
+    volumes:
+      - frontend_build:/out
+    # One-shot container. Re-runs on every `docker compose up --build`.
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - frontend_build:/srv/frontend:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+      - frontend-builder
+    networks:
+      - aricrm_net
+
+volumes:
+  mongo_data:
+  frontend_build:
+  caddy_data:
+  caddy_config:
+
+networks:
+  aricrm_net:
+    driver: bridge

@@ -15,7 +15,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "../components/ui/select";
 import {
-  Download, Pencil, Trash2, Send, MessageCircle, Mail, GitBranch, ArrowLeft, Loader2, Printer,
+  Download, Pencil, Trash2, Send, MessageCircle, Mail, GitBranch, ArrowLeft, Loader2, Printer, PenTool,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -38,6 +38,7 @@ export default function QuoteView() {
   const [waOpen, setWaOpen] = useState(false);
   const [waNumber, setWaNumber] = useState("");
   const [waMessage, setWaMessage] = useState("");
+  const [signed, setSigned] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -224,6 +225,17 @@ ${c.data.company_name || "Arıgastro"}`);
         </Button>
         <Button variant="outline" onClick={() => window.print()} data-testid="print-btn"><Printer size={14} className="mr-2" /> Yazdır</Button>
 
+        {/* Imzala toggle */}
+        <Button
+          variant="outline"
+          onClick={() => setSigned((s) => !s)}
+          className={signed ? "bg-brand/10 border-brand text-brand hover:bg-brand/20 hover:text-brand" : ""}
+          data-testid="sign-toggle-btn"
+        >
+          <PenTool size={14} className="mr-2" />
+          {signed ? "İmzayı Kaldır" : "İmzala"}
+        </Button>
+
         {/* Email */}
         <Dialog open={emailOpen} onOpenChange={setEmailOpen}>
           <DialogTrigger asChild>
@@ -291,7 +303,7 @@ ${c.data.company_name || "Arıgastro"}`);
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         <div ref={pdfRef} className="flex justify-center p-2 sm:p-4 overflow-auto" style={{ background: "#e2e8f0" }}>
           <div style={{ minWidth: "210mm" }}>
-            <QuotePDFTemplate quote={quote} customer={customer} company={company} />
+            <QuotePDFTemplate quote={quote} customer={customer} company={company} signed={signed} />
           </div>
         </div>
       </div>

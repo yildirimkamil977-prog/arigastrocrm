@@ -23,7 +23,7 @@ function proxify(url) {
  * Printable / PDF quote template.
  * Keeps itself print-friendly; uses inline styles for html2canvas reliability.
  */
-export default function QuotePDFTemplate({ quote, customer, company }) {
+export default function QuotePDFTemplate({ quote, customer, company, signed = false }) {
   const {
     quote_no, issue_date, valid_until, currency, items = [],
     subtotal = 0,
@@ -215,34 +215,36 @@ export default function QuotePDFTemplate({ quote, customer, company }) {
         </div>
         <div style={{ textAlign: "right" }}>
           <div>Bu teklif {formatDate(valid_until)} tarihine kadar geçerlidir.</div>
-          <div style={{ marginTop: 4 }}>
-            <div
-              style={{
-                fontFamily: "'Whisper', cursive",
-                fontSize: 38,
-                color: "#0073c4",
-                lineHeight: 1,
-                marginTop: 14,
-                minHeight: 42,
-              }}
-            >
-              {authorizedName}
+          {signed && (
+            <div style={{ marginTop: 4 }}>
+              <div
+                style={{
+                  fontFamily: "'Whisper', cursive",
+                  fontSize: 38,
+                  color: "#0073c4",
+                  lineHeight: 1,
+                  marginTop: 14,
+                  minHeight: 42,
+                }}
+              >
+                {authorizedName}
+              </div>
+              <div
+                style={{
+                  borderTop: "1px solid #94a3b8",
+                  paddingTop: 3,
+                  marginTop: 2,
+                  display: "inline-block",
+                  minWidth: 180,
+                  fontSize: 10,
+                  color: "#334155",
+                }}
+              >
+                <b>{authorizedName}</b>
+                <div style={{ fontSize: 8, color: "#64748b", marginTop: 1 }}>Yetkili İmza</div>
+              </div>
             </div>
-            <div
-              style={{
-                borderTop: "1px solid #94a3b8",
-                paddingTop: 3,
-                marginTop: 2,
-                display: "inline-block",
-                minWidth: 180,
-                fontSize: 10,
-                color: "#334155",
-              }}
-            >
-              <b>{authorizedName}</b>
-              <div style={{ fontSize: 8, color: "#64748b", marginTop: 1 }}>Yetkili İmza</div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
 

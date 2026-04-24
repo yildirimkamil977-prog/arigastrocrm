@@ -10,8 +10,40 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "../components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
-import { Save, Loader2 } from "lucide-react";
+import { Save, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
+
+/** Small inline uploader: click to pick a file, POST /api/uploads, call back with URL. */
+function ImageUploader({ onUploaded, label = "Görsel Yükle", testId }) {
+  const [busy, setBusy] = useState(false);
+  const inputRef = React.useRef(null);
+  const handleFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const { data } = await api.post("/uploads", fd, { headers: { "Content-Type": "multipart/form-data" } });
+      onUploaded(data.url);
+      toast.success("Görsel yüklendi");
+    } catch (err) {
+      toast.error(formatApiError(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <>
+      <input ref={inputRef} type="file" accept="image/*" onChange={handleFile} className="hidden" data-testid={testId} />
+      <Button type="button" variant="outline" size="sm" onClick={() => inputRef.current?.click()} disabled={busy}>
+        {busy ? <Loader2 size={14} className="mr-2 animate-spin" /> : <Upload size={14} className="mr-2" />}
+        {label}
+      </Button>
+    </>
+  );
+}
 
 export default function Settings() {
   const [form, setForm] = useState(null);
@@ -60,7 +92,13 @@ export default function Settings() {
 
         <TabsContent value="company">
           <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2"><Label>Logo URL</Label><Input value={form.logo_url} onChange={(e) => set("logo_url", e.target.value)} placeholder="https://..." data-testid="settings-logo-url" /></div>
+            <div className="md:col-span-2">
+              <div className="flex items-center justify-between mb-1">
+                <Label>Logo URL</Label>
+                <ImageUploader onUploaded={(url) => set("logo_url", url)} label="Logo Yükle" testId="upload-logo" />
+              </div>
+              <Input value={form.logo_url} onChange={(e) => set("logo_url", e.target.value)} placeholder="https://..." data-testid="settings-logo-url" />
+            </div>
             {form.logo_url && <div className="md:col-span-2 bg-slate-50 p-4 rounded-lg"><img src={form.logo_url} alt="logo" className="h-16 object-contain" /></div>}
             <div><Label>İşletme Adı</Label><Input value={form.company_name} onChange={(e) => set("company_name", e.target.value)} /></div>
             <div><Label>Slogan</Label><Input value={form.tagline} onChange={(e) => set("tagline", e.target.value)} /></div>
@@ -174,7 +212,19 @@ export default function Settings() {
             )}
 
             <div className="pt-4 border-t border-slate-100">
-              <Label>E-posta İmzası (HTML destekli)</Label>
+              <div className="flex items-center justify-between mb-1">
+                <Label>E-posta İmzası (HTML destekli)</Label>
+                <ImageUploader
+                  onUploaded={(url) => {
+                    navigator.clipboard?.writeText(url).catch(() => {});
+                    const tag = `<img src="${url}" alt="imza" style="max-width:200px"/>`;
+                    set("email_signature_html", (form.email_signature_html || "") + "\n" + tag);
+                    toast.success("Görsel yüklendi ve imzaya eklendi");
+                  }}
+                  label="İmzaya Görsel Ekle"
+                  testId="upload-signature-image"
+                />
+              </div>
               <Textarea
                 rows={6}
                 value={form.email_signature_html || ""}
@@ -183,7 +233,7 @@ export default function Settings() {
                 data-testid="settings-email-signature"
               />
               <p className="text-xs text-slate-500 mt-2">
-                Gönderilen her teklif e-postasının sonuna bu imza otomatik olarak eklenir. HTML etiketleri (örn. <code>&lt;b&gt;</code>, <code>&lt;br/&gt;</code>, <code>&lt;a&gt;</code>) desteklenir.
+                Gönderilen her teklif e-postasının sonuna bu imza otomatik olarak eklenir. HTML etiketleri (örn. <code>&lt;b&gt;</code>, <code>&lt;br/&gt;</code>, <code>&lt;a&gt;</code>, <code>&lt;img&gt;</code>) desteklenir. "İmzaya Görsel Ekle" ile logo/banner yükleyip otomatik <code>&lt;img&gt;</code> etiketi olarak ekleyebilirsiniz.
               </p>
             </div>
           </div>

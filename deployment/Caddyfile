@@ -10,6 +10,13 @@
         reverse_proxy backend:8001
     }
 
+    # User-uploaded images (logos, signatures) → shared volume
+    handle /uploads/* {
+        root * /srv
+        file_server
+        header Cache-Control "public, max-age=2592000"
+    }
+
     # Everything else → React SPA (static build)
     handle {
         root * /srv/frontend

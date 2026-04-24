@@ -28,8 +28,11 @@ services:
     environment:
       MONGO_URL: mongodb://mongo:27017
       DB_NAME: ${DB_NAME}
+      UPLOAD_DIR: /app/uploads
     depends_on:
       - mongo
+    volumes:
+      - uploads_data:/app/uploads
     networks:
       - aricrm_net
     # Not exposed to host — Caddy proxies to it over the docker network.
@@ -57,6 +60,7 @@ services:
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - frontend_build:/srv/frontend:ro
+      - uploads_data:/srv/uploads:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
@@ -68,6 +72,7 @@ services:
 volumes:
   mongo_data:
   frontend_build:
+  uploads_data:
   caddy_data:
   caddy_config:
 

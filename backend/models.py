@@ -174,6 +174,8 @@ class CompanySettings(BaseModel):
     smtp_password: str = ""
     smtp_from_email: str = ""
     smtp_use_tls: bool = True
+    # Email signature (HTML) appended to every quote email body
+    email_signature_html: str = ""
     # Default quote defaults
     default_vat_rate: float = 0.0
     default_validity_days: int = 30

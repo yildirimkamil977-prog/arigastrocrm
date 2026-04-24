@@ -172,6 +172,20 @@ export default function Settings() {
                 <div className="flex items-center gap-2"><Switch checked={form.smtp_use_tls} onCheckedChange={(v) => set("smtp_use_tls", v)} /> <span className="text-sm">STARTTLS kullan</span></div>
               </div>
             )}
+
+            <div className="pt-4 border-t border-slate-100">
+              <Label>E-posta İmzası (HTML destekli)</Label>
+              <Textarea
+                rows={6}
+                value={form.email_signature_html || ""}
+                onChange={(e) => set("email_signature_html", e.target.value)}
+                placeholder={'Örnek:\n<b>Murat Arısoy</b><br/>Satış Müdürü<br/>Arıgastro · +90 555 000 00 00<br/><a href="https://arigastro.com">arigastro.com</a>'}
+                data-testid="settings-email-signature"
+              />
+              <p className="text-xs text-slate-500 mt-2">
+                Gönderilen her teklif e-postasının sonuna bu imza otomatik olarak eklenir. HTML etiketleri (örn. <code>&lt;b&gt;</code>, <code>&lt;br/&gt;</code>, <code>&lt;a&gt;</code>) desteklenir.
+              </p>
+            </div>
           </div>
         </TabsContent>
 

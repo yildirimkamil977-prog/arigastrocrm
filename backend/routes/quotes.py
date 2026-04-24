@@ -305,11 +305,14 @@ def build_quotes_router(db):
         customer = await db.customers.find_one({"id": q["customer_id"]}, {"_id": 0})
         company_name = settings.get("company_name", "Arıgastro")
         subject = body.subject or f"{company_name} - Teklif {q['quote_no']}"
+        signature_html = (settings.get("email_signature_html") or "").strip()
+        signature_block = f'<hr style="margin:24px 0;border:none;border-top:1px solid #e5e7eb"/><div>{signature_html}</div>' if signature_html else ""
         html_body = body.message or (
             f"<p>Sayın {customer.get('contact_person') or customer.get('company_name', '') if customer else ''},</p>"
             f"<p>{q['quote_no']} numaralı teklifimizi ekte bulabilirsiniz.</p>"
             f"<p>Saygılarımızla,<br/>{company_name}</p>"
         )
+        html_body = f"{html_body}{signature_block}"
 
         try:
             pdf_bytes = base64.b64decode(body.pdf_base64.split(",")[-1])
@@ -322,8 +325,15 @@ def build_quotes_router(db):
                 raise HTTPException(status_code=400, detail="Resend API anahtarı ayarlanmadı. Ayarlar'dan ekleyin.")
             resend.api_key = api_key
             company_email = settings.get("email", "").strip()
+            from_email_raw = (settings.get("resend_from_email") or "onboarding@resend.dev").strip()
+            # Wrap with company name so inbox shows "Arıgastro" instead of "teklif"
+            # Skip if user already provided "Name <addr>" format.
+            if "<" not in from_email_raw and company_name:
+                from_header = f"{company_name} <{from_email_raw}>"
+            else:
+                from_header = from_email_raw
             params = {
-                "from": settings.get("resend_from_email") or "onboarding@resend.dev",
+                "from": from_header,
                 "to": [body.recipient_email],
                 "subject": subject,
                 "html": html_body,
@@ -375,10 +385,15 @@ def build_quotes_router(db):
             smtp_user = settings.get("smtp_user", "")
             smtp_pass = settings.get("smtp_password", "")
             from_email = settings.get("smtp_from_email") or smtp_user
+            # Wrap with company name for display
+            if "<" not in (from_email or "") and company_name:
+                from_header = f"{company_name} <{from_email}>"
+            else:
+                from_header = from_email
             if not host or not smtp_user or not smtp_pass:
                 raise HTTPException(status_code=400, detail="SMTP ayarları eksik")
             msg = MIMEMultipart()
-            msg["From"] = from_email
+            msg["From"] = from_header
             msg["To"] = body.recipient_email
             msg["Subject"] = subject
             company_email = settings.get("email", "").strip()

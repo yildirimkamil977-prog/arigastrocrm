@@ -24,7 +24,7 @@ from routes.customers import build_customers_router
 from routes.products import build_products_router
 from routes.quotes import build_quotes_router, build_public_pdf_router
 from routes.settings import build_settings_router, get_settings_doc
-from routes.uploads import build_uploads_router
+from routes.uploads import build_uploads_router, build_image_proxy_router
 from feed_sync import start_daily_scheduler, sync_products
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -64,7 +64,7 @@ api_router.include_router(build_quotes_router(db))
 api_router.include_router(build_public_pdf_router(db))
 api_router.include_router(build_settings_router(db))
 api_router.include_router(build_uploads_router(db))
-
+api_router.include_router(build_image_proxy_router())
 app.include_router(api_router)
 
 # CORS

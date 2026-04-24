@@ -1,5 +1,23 @@
 import React from "react";
-import { formatDate, formatMoney } from "../lib/api";
+import { formatDate, formatMoney, API_URL } from "../lib/api";
+
+/**
+ * Route external images through our backend so html2canvas doesn't taint the canvas.
+ * Leaves same-origin and data: / uploads/ URLs untouched.
+ */
+function proxify(url) {
+  if (!url) return "";
+  if (url.startsWith("data:")) return url;
+  try {
+    const u = new URL(url, window.location.origin);
+    const sameOrigin = u.origin === window.location.origin;
+    const isOwnUpload = u.pathname.startsWith("/uploads/") || u.pathname.startsWith("/api/uploads/");
+    if (sameOrigin || isOwnUpload) return url;
+    return `${API_URL}/image-proxy?url=${encodeURIComponent(url)}`;
+  } catch {
+    return url;
+  }
+}
 
 /**
  * Printable / PDF quote template.
@@ -31,7 +49,7 @@ export default function QuotePDFTemplate({ quote, customer, company }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid #0073c4", paddingBottom: 16 }}>
         <div style={{ maxWidth: "55%" }}>
           {company?.logo_url ? (
-            <img src={company.logo_url} alt="logo" style={{ maxHeight: 60, maxWidth: 240, objectFit: "contain" }} crossOrigin="anonymous" />
+            <img src={proxify(company.logo_url)} alt="logo" style={{ maxHeight: 60, maxWidth: 240, objectFit: "contain" }} crossOrigin="anonymous" />
           ) : (
             <div style={{ fontSize: 22, fontFamily: "Outfit, sans-serif", fontWeight: 700, color: "#0073c4" }}>
               {company?.company_name || "Arıgastro"}
@@ -105,7 +123,7 @@ export default function QuotePDFTemplate({ quote, customer, company }) {
                 <td style={{ padding: "8px 6px", verticalAlign: "top" }}>{i + 1}</td>
                 <td style={{ padding: "6px", verticalAlign: "top" }}>
                   {it.image ? (
-                    <img src={it.image} alt="" style={{ width: 60, height: 60, objectFit: "contain", background: "#fff", border: "1px solid #e2e8f0" }} crossOrigin="anonymous" />
+                    <img src={proxify(it.image)} alt="" style={{ width: 60, height: 60, objectFit: "contain", background: "#fff", border: "1px solid #e2e8f0" }} crossOrigin="anonymous" />
                   ) : null}
                 </td>
                 <td style={{ padding: "8px 6px", verticalAlign: "top" }}>

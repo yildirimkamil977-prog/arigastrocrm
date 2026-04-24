@@ -42,6 +42,7 @@ export default function QuoteForm() {
   const [productQuery, setProductQuery] = useState("");
   const [productResults, setProductResults] = useState([]);
   const [prodPopOpen, setProdPopOpen] = useState(false);
+  const [prodPopOpenBottom, setProdPopOpenBottom] = useState(false);
 
   // Load initial data
   useEffect(() => {
@@ -302,11 +303,67 @@ export default function QuoteForm() {
                 Henüz ürün eklenmedi. "Ürün Ekle" ile başlayın.
               </div>
             ) : (
-              <div className="space-y-3">
-                {items.map((it, i) => (
-                  <ItemRow key={i} idx={i} item={it} currency={currency} onChange={(patch) => updateItem(i, patch)} onRemove={() => removeItem(i)} />
-                ))}
-              </div>
+              <>
+                <div className="space-y-3">
+                  {items.map((it, i) => (
+                    <ItemRow key={i} idx={i} item={it} currency={currency} onChange={(patch) => updateItem(i, patch)} onRemove={() => removeItem(i)} />
+                  ))}
+                </div>
+                <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-slate-100">
+                  <Popover open={prodPopOpenBottom} onOpenChange={setProdPopOpenBottom}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" data-testid="add-product-btn-bottom">
+                        <Plus size={14} className="mr-1" /> Ürün Ekle
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-96 p-0" align="end">
+                      <div className="p-3 border-b border-slate-100">
+                        <div className="relative">
+                          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                          <Input
+                            className="pl-9 h-9"
+                            placeholder="Ürün adı, kodu veya GTIN ile ara…"
+                            value={productQuery}
+                            onChange={(e) => setProductQuery(e.target.value)}
+                            autoFocus
+                          />
+                        </div>
+                      </div>
+                      <div className="max-h-80 overflow-y-auto">
+                        {productResults.map((p) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => { addProduct(p); setProdPopOpenBottom(false); }}
+                            className="w-full text-left px-3 py-2 hover:bg-slate-50 border-b border-slate-100 last:border-0 flex gap-3 items-center"
+                          >
+                            {p.image && <img src={p.image} alt="" className="w-10 h-10 object-contain bg-slate-50 rounded" />}
+                            <div className="flex-1 min-w-0">
+                              <div className="text-xs font-mono uppercase text-slate-500">#{p.code || p.gtin}</div>
+                              <div className="text-sm font-medium line-clamp-1">{p.title}</div>
+                              <div className="text-xs text-brand">{formatMoney(p.price, p.currency)}</div>
+                            </div>
+                          </button>
+                        ))}
+                        {productQuery.length >= 2 && productResults.length === 0 && (
+                          <div className="p-4 text-sm text-slate-400 text-center">Sonuç yok</div>
+                        )}
+                        {productQuery.length < 2 && (
+                          <div className="p-4 text-sm text-slate-400 text-center">En az 2 karakter yazın</div>
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={addBlankItem}
+                    data-testid="add-custom-item-btn-bottom"
+                  >
+                    <Plus size={14} className="mr-1" /> Özel Kalem
+                  </Button>
+                </div>
+              </>
             )}
           </section>
 

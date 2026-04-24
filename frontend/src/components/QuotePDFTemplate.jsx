@@ -229,20 +229,6 @@ export default function QuotePDFTemplate({ quote, customer, company, signed = fa
               >
                 {authorizedName}
               </div>
-              <div
-                style={{
-                  borderTop: "1px solid #94a3b8",
-                  paddingTop: 3,
-                  marginTop: 2,
-                  display: "inline-block",
-                  minWidth: 180,
-                  fontSize: 10,
-                  color: "#334155",
-                }}
-              >
-                <b>{authorizedName}</b>
-                <div style={{ fontSize: 8, color: "#64748b", marginTop: 1 }}>Yetkili İmza</div>
-              </div>
             </div>
           )}
         </div>

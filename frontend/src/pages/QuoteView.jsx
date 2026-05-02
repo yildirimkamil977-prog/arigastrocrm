@@ -101,22 +101,65 @@ ${c.data.company_name || "Arıgastro"}`);
       });
       const imgData = canvas.toDataURL("image/jpeg", 0.92);
 
+      // Collect Y-coordinates of "safe break points" — gaps between table rows
+      // and other block elements — so we can snap each page boundary to the
+      // nearest gap and avoid slicing through a product row.
+      const nodeRect = node.getBoundingClientRect();
+      const ratio = canvas.height / nodeRect.height; // CSS px → canvas px
+      const breakables = node.querySelectorAll(
+        "tbody tr, .pdf-section, .pdf-row"
+      );
+      const safeStops = new Set([0, canvas.height]);
+      breakables.forEach((el) => {
+        const r = el.getBoundingClientRect();
+        // Top of element = potential break point (rendered above this row)
+        safeStops.add(Math.round((r.top - nodeRect.top) * ratio));
+        // Bottom of element = also fine (page break after this row)
+        safeStops.add(Math.round((r.bottom - nodeRect.top) * ratio));
+      });
+      const stops = Array.from(safeStops).sort((a, b) => a - b);
+
       const pdf = new jsPDF({ unit: "mm", format: "a4", compress: true });
       const pageW = pdf.internal.pageSize.getWidth();
       const pageH = pdf.internal.pageSize.getHeight();
-      const imgW = pageW;
-      const imgH = (canvas.height * imgW) / canvas.width;
-      let heightLeft = imgH;
-      let position = 0;
+      // canvas px per mm — so we know how many canvas px fit in one A4 page
+      const pxPerMm = canvas.width / pageW;
+      const pageHeightCanvasPx = Math.floor(pageH * pxPerMm);
 
-      pdf.addImage(imgData, "JPEG", 0, position, imgW, imgH);
-      heightLeft -= pageH;
-      while (heightLeft > 0) {
-        position = heightLeft - imgH;
-        pdf.addPage();
-        pdf.addImage(imgData, "JPEG", 0, position, imgW, imgH);
-        heightLeft -= pageH;
+      // Slice the source canvas into per-page chunks at safe Y boundaries.
+      let cursor = 0;
+      while (cursor < canvas.height) {
+        const idealEnd = cursor + pageHeightCanvasPx;
+        let sliceEnd;
+        if (idealEnd >= canvas.height) {
+          sliceEnd = canvas.height;
+        } else {
+          // Find the largest safe stop that's <= idealEnd and > cursor
+          const candidate = stops.filter((s) => s > cursor + 50 && s <= idealEnd).pop();
+          sliceEnd = candidate || idealEnd; // fallback if no stop in range
+        }
+        const sliceHeight = sliceEnd - cursor;
+
+        // Render this slice to its own canvas → image → page
+        const pageCanvas = document.createElement("canvas");
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = sliceHeight;
+        const ctx = pageCanvas.getContext("2d");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+        ctx.drawImage(
+          canvas,
+          0, cursor, canvas.width, sliceHeight,
+          0, 0, canvas.width, sliceHeight,
+        );
+        const slice = pageCanvas.toDataURL("image/jpeg", 0.92);
+        const sliceMm = sliceHeight / pxPerMm;
+        if (cursor > 0) pdf.addPage();
+        pdf.addImage(slice, "JPEG", 0, 0, pageW, sliceMm);
+        cursor = sliceEnd;
       }
+      // Reference imgData so build doesn't optimize it away (kept for future debug)
+      void imgData;
       return pdf;
     } finally {
       setGenerating(false);

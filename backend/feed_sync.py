@@ -10,10 +10,20 @@ from lxml import etree
 logger = logging.getLogger(__name__)
 
 NS = {"g": "http://base.google.com/ns/1.0"}
-CODE_PATTERNS = [
-    re.compile(r"(?:Ür[üu]n\s*Kodu|Ürün Kodu|Ürün\s*Kod|Product\s*Code)[\s:]*\n?\s*([A-Z0-9][A-Z0-9.\-_\/]*)", re.IGNORECASE),
-    re.compile(r"Kod[\s:]*\n?\s*([A-Z0-9][A-Z0-9.\-_\/]{3,})", re.IGNORECASE),
-]
+
+# Description içinde "Ürün Kodu: XYZ" / "Model Kodu: XYZ" / "Stok Kodu: XYZ"
+# gibi etiketli alanlardan çek. Kod sonrası bir başka etiket ("Boyutlar:",
+# "Kapasite:", vs.) veya yeni satır ile sınırlandırılır.
+LABEL_CODE_RE = re.compile(
+    r"(?:Ür[üu]n\s*Kodu|Model\s*Kodu|Stok\s*Kodu|Ürün\s*Kod|Product\s*Code)\s*[:：]?\s*"
+    r"([A-Z0-9][A-Z0-9.\-_/ ]{1,40}?)"
+    r"(?=\s*(?:\n|\t|\r|$|[A-ZÇĞİÖŞÜa-zçğıöşü][\wçğıöşüÇĞİÖŞÜ ]{2,30}\s*[:：]))",
+    re.IGNORECASE | re.UNICODE,
+)
+
+# Başlıkta geçen model numarası (ör. "Eka MKL-1064S", "Brema CB 184", "X580C").
+# Harfle başlar, en az 2 rakam içerir, isteğe bağlı son ek harfler/rakamlar.
+TITLE_MODEL_RE = re.compile(r"\b([A-Z][A-Z0-9]{1,3}[- ]?\d{2,5}[A-Z0-9]{0,6})\b")
 
 
 def _txt(el, tag: str) -> str:
@@ -39,15 +49,24 @@ def _parse_price(raw: str):
 
 
 def _extract_code(description: str, gtin: str, title: str) -> str:
-    """Extract product code from HTML-encoded description."""
+    """Extract product code with a multi-strategy approach:
+    1. Explicit label in description ("Ürün Kodu: XYZ", "Stok Kodu: XYZ", ...)
+    2. Model pattern in the title ("Eka MKL-1064S" → "MKL-1064S")
+    3. Fall back to GTIN/barcode if nothing else is found
+    """
     import html
     txt = html.unescape(description or "")
-    for pat in CODE_PATTERNS:
-        m = pat.search(txt)
-        if m:
-            code = m.group(1).strip()
-            if len(code) >= 3:
-                return code
+
+    m = LABEL_CODE_RE.search(txt)
+    if m:
+        code = re.sub(r"\s+", " ", m.group(1)).strip().rstrip(".,-")
+        if 2 <= len(code) <= 40:
+            return code
+
+    m = TITLE_MODEL_RE.search(title or "")
+    if m:
+        return m.group(1).strip()
+
     if gtin:
         return gtin
     return ""

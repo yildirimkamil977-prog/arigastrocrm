@@ -128,7 +128,7 @@ export default function QuotePDFTemplate({ quote, customer, company, signed = fa
                 <td style={{ padding: "8px 6px", verticalAlign: "top" }}>{i + 1}</td>
                 <td style={{ padding: "6px", verticalAlign: "top" }}>
                   {it.image ? (
-                    <img src={proxify(it.image)} alt="" style={{ width: 60, height: 60, objectFit: "contain", background: "#fff", border: "1px solid #e2e8f0" }} crossOrigin="anonymous" />
+                    <SafeImg src={it.image} alt="" style={{ width: 60, height: 60, objectFit: "contain", background: "#fff", border: "1px solid #e2e8f0" }} />
                   ) : null}
                 </td>
                 <td style={{ padding: "8px 6px", verticalAlign: "top" }}>

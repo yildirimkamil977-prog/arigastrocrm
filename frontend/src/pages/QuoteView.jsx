@@ -75,6 +75,23 @@ ${c.data.company_name || "Arıgastro"}`);
       const node = pdfRef.current?.querySelector("#quote-pdf-root");
       if (!node) throw new Error("PDF şablonu bulunamadı");
 
+      // Wait for every <img> in the PDF root to either load or bubble onError
+      // (SafeImg will then swap to the proxy URL — we need to wait again for that).
+      const waitForImages = async () => {
+        const imgs = Array.from(node.querySelectorAll("img"));
+        await Promise.all(imgs.map((img) => new Promise((resolve) => {
+          if (img.complete && img.naturalWidth > 0) return resolve();
+          const done = () => resolve();
+          img.addEventListener("load", done, { once: true });
+          img.addEventListener("error", done, { once: true });
+          setTimeout(done, 8000);
+        })));
+      };
+      await waitForImages();
+      // SafeImg may have swapped src on failure; give React a tick and wait again.
+      await new Promise((r) => setTimeout(r, 250));
+      await waitForImages();
+
       const canvas = await html2canvas(node, {
         scale: 2,
         useCORS: true,

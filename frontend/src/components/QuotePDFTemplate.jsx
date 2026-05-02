@@ -2,21 +2,26 @@ import React from "react";
 import { formatDate, formatMoney, API_URL } from "../lib/api";
 
 /**
- * Route external images through our backend so html2canvas doesn't taint the canvas.
- * Leaves same-origin and data: / uploads/ URLs untouched.
+ * Image with automatic proxy fallback.
+ * Loads the URL directly first (fast, works for feed CDN). If the browser
+ * throws an error (CORS block, 404, network), swaps src to the backend
+ * image-proxy endpoint so html2canvas can still render it.
  */
-function proxify(url) {
-  if (!url) return "";
-  if (url.startsWith("data:")) return url;
-  try {
-    const u = new URL(url, window.location.origin);
-    const sameOrigin = u.origin === window.location.origin;
-    const isOwnUpload = u.pathname.startsWith("/uploads/") || u.pathname.startsWith("/api/uploads/");
-    if (sameOrigin || isOwnUpload) return url;
-    return `${API_URL}/image-proxy?url=${encodeURIComponent(url)}`;
-  } catch {
-    return url;
-  }
+function SafeImg({ src, style, alt = "" }) {
+  const [current, setCurrent] = React.useState(src);
+  const [triedProxy, setTriedProxy] = React.useState(false);
+  React.useEffect(() => { setCurrent(src); setTriedProxy(false); }, [src]);
+  const handleError = () => {
+    if (triedProxy || !src || src.startsWith("data:")) return;
+    try {
+      const u = new URL(src, window.location.origin);
+      const sameOrigin = u.origin === window.location.origin;
+      if (sameOrigin) return;
+    } catch { return; }
+    setTriedProxy(true);
+    setCurrent(`${API_URL}/image-proxy?url=${encodeURIComponent(src)}`);
+  };
+  return <img src={current} alt={alt} style={style} crossOrigin="anonymous" onError={handleError} />;
 }
 
 /**
@@ -49,7 +54,7 @@ export default function QuotePDFTemplate({ quote, customer, company, signed = fa
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid #0073c4", paddingBottom: 16 }}>
         <div style={{ maxWidth: "55%" }}>
           {company?.logo_url ? (
-            <img src={proxify(company.logo_url)} alt="logo" style={{ maxHeight: 60, maxWidth: 240, objectFit: "contain" }} crossOrigin="anonymous" />
+            <SafeImg src={company.logo_url} alt="logo" style={{ maxHeight: 60, maxWidth: 240, objectFit: "contain" }} />
           ) : (
             <div style={{ fontSize: 22, fontFamily: "Outfit, sans-serif", fontWeight: 700, color: "#0073c4" }}>
               {company?.company_name || "Arıgastro"}

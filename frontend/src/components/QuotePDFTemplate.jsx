@@ -85,17 +85,19 @@ export default function QuotePDFTemplate({ quote, customer, company, signed = fa
 
       {/* Parties */}
       <div style={{ display: "flex", gap: 16, marginTop: 24 }}>
-        <div style={{ flex: 1, border: "1px solid #e2e8f0", borderRadius: 6, padding: 12 }}>
-          <div style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.2, color: "#94a3b8" }}>Sayın Müşteri</div>
-          <div style={{ fontSize: 13, fontWeight: 600, marginTop: 4 }}>{customer?.company_name || "-"}</div>
-          <div style={{ fontSize: 10, color: "#475569", marginTop: 4, lineHeight: 1.5 }}>
-            {customer?.contact_person && <>{customer.contact_person}<br /></>}
-            {customer?.address}
-            {customer?.tax_number && <><br />VN: {customer.tax_number} {customer.tax_office ? `/ ${customer.tax_office}` : ""}</>}
-            {customer?.phone && <><br />Tel: {customer.phone}</>}
-            {customer?.email && <><br />{customer.email}</>}
+        {!hidePrices && (
+          <div style={{ flex: 1, border: "1px solid #e2e8f0", borderRadius: 6, padding: 12 }}>
+            <div style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.2, color: "#94a3b8" }}>Sayın Müşteri</div>
+            <div style={{ fontSize: 13, fontWeight: 600, marginTop: 4 }}>{customer?.company_name || "-"}</div>
+            <div style={{ fontSize: 10, color: "#475569", marginTop: 4, lineHeight: 1.5 }}>
+              {customer?.contact_person && <>{customer.contact_person}<br /></>}
+              {customer?.address}
+              {customer?.tax_number && <><br />VN: {customer.tax_number} {customer.tax_office ? `/ ${customer.tax_office}` : ""}</>}
+              {customer?.phone && <><br />Tel: {customer.phone}</>}
+              {customer?.email && <><br />{customer.email}</>}
+            </div>
           </div>
-        </div>
+        )}
         <div style={{ flex: 1, border: "1px solid #e2e8f0", borderRadius: 6, padding: 12, background: "#f8fafc" }}>
           <div style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.2, color: "#94a3b8" }}>Firma Bilgileri</div>
           <div style={{ fontSize: 13, fontWeight: 600, marginTop: 4 }}>{company?.company_name}</div>

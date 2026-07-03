@@ -184,7 +184,7 @@ export default function QuotePDFTemplate({ quote, customer, company, signed = fa
       )}
 
       {/* Notes */}
-      {notes && (
+      {notes && !hidePrices && (
         <div style={{ marginTop: 24, padding: 12, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 6 }}>
           <div style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.2, color: "#94a3b8", marginBottom: 4 }}>Notlar</div>
           <div style={{ fontSize: 10, color: "#334155", whiteSpace: "pre-wrap" }}>{notes}</div>
@@ -231,7 +231,9 @@ export default function QuotePDFTemplate({ quote, customer, company, signed = fa
           })()}
         </div>
         <div style={{ textAlign: "right" }}>
-          <div>Bu teklif {formatDate(valid_until)} tarihine kadar geçerlidir.</div>
+          {!hidePrices && (
+            <div>Bu teklif {formatDate(valid_until)} tarihine kadar geçerlidir.</div>
+          )}
           {signed && (
             <div style={{ marginTop: 4 }}>
               <div

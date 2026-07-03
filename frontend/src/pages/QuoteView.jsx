@@ -15,7 +15,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "../components/ui/select";
 import {
-  Download, Pencil, Trash2, Send, MessageCircle, Mail, GitBranch, ArrowLeft, Loader2, Printer, PenTool,
+  Download, Pencil, Trash2, Send, MessageCircle, Mail, GitBranch, ArrowLeft, Loader2, Printer, PenTool, EyeOff,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -39,6 +39,7 @@ export default function QuoteView() {
   const [waNumber, setWaNumber] = useState("");
   const [waMessage, setWaMessage] = useState("");
   const [signed, setSigned] = useState(false);
+  const [hidePrices, setHidePrices] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -175,6 +176,20 @@ ${c.data.company_name || "Arıgastro"}`);
     }
   };
 
+  const downloadPricelessPdf = async () => {
+    setHidePrices(true);
+    // Give React two paint frames to re-render the template without prices
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    try {
+      const pdf = await generatePdf();
+      pdf.save(`Teklif-${quote.quote_no}-fiyatsiz.pdf`);
+    } catch (e) {
+      toast.error("PDF oluşturulamadı: " + e.message);
+    } finally {
+      setHidePrices(false);
+    }
+  };
+
   const sendEmail = async (e) => {
     e.preventDefault();
     setSending(true);
@@ -283,6 +298,15 @@ ${c.data.company_name || "Arıgastro"}`);
           {generating ? <Loader2 size={14} className="mr-2 animate-spin" /> : <Download size={14} className="mr-2" />}
           PDF İndir
         </Button>
+        <Button
+          variant="outline"
+          onClick={downloadPricelessPdf}
+          disabled={generating}
+          data-testid="download-priceless-pdf-btn"
+        >
+          {generating ? <Loader2 size={14} className="mr-2 animate-spin" /> : <EyeOff size={14} className="mr-2" />}
+          Fiyatsız İndir
+        </Button>
         <Button variant="outline" onClick={() => window.print()} data-testid="print-btn"><Printer size={14} className="mr-2" /> Yazdır</Button>
 
         {/* Imzala toggle */}
@@ -363,7 +387,7 @@ ${c.data.company_name || "Arıgastro"}`);
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         <div ref={pdfRef} className="flex justify-center p-2 sm:p-4 overflow-auto" style={{ background: "#e2e8f0" }}>
           <div style={{ minWidth: "210mm" }}>
-            <QuotePDFTemplate quote={quote} customer={customer} company={company} signed={signed} />
+            <QuotePDFTemplate quote={quote} customer={customer} company={company} signed={signed} hidePrices={hidePrices} />
           </div>
         </div>
       </div>

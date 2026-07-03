@@ -28,7 +28,7 @@ function SafeImg({ src, style, alt = "" }) {
  * Printable / PDF quote template.
  * Keeps itself print-friendly; uses inline styles for html2canvas reliability.
  */
-export default function QuotePDFTemplate({ quote, customer, company, signed = false }) {
+export default function QuotePDFTemplate({ quote, customer, company, signed = false, hidePrices = false }) {
   const {
     quote_no, issue_date, valid_until, currency, items = [],
     subtotal = 0,
@@ -114,9 +114,13 @@ export default function QuotePDFTemplate({ quote, customer, company, signed = fa
             <th style={{ padding: "8px 6px", textAlign: "left", width: 70 }}>Görsel</th>
             <th style={{ padding: "8px 6px", textAlign: "left" }}>Ürün</th>
             <th style={{ padding: "8px 6px", textAlign: "right", width: 50 }}>Adet</th>
-            <th style={{ padding: "8px 6px", textAlign: "right", width: 90 }}>Birim Fiyat</th>
-            <th style={{ padding: "8px 6px", textAlign: "right", width: 50 }}>İnd.%</th>
-            <th style={{ padding: "8px 6px", textAlign: "right", width: 100 }}>Tutar</th>
+            {!hidePrices && (
+              <>
+                <th style={{ padding: "8px 6px", textAlign: "right", width: 90 }}>Birim Fiyat</th>
+                <th style={{ padding: "8px 6px", textAlign: "right", width: 50 }}>İnd.%</th>
+                <th style={{ padding: "8px 6px", textAlign: "right", width: 100 }}>Tutar</th>
+              </>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -137,9 +141,13 @@ export default function QuotePDFTemplate({ quote, customer, company, signed = fa
                   {it.description && <div style={{ color: "#475569", marginTop: 2 }}>{it.description}</div>}
                 </td>
                 <td style={{ padding: "8px 6px", textAlign: "right", verticalAlign: "top" }}>{Number(it.quantity) || 0}</td>
-                <td style={{ padding: "8px 6px", textAlign: "right", verticalAlign: "top" }}>{formatMoney(it.unit_price, currency)}</td>
-                <td style={{ padding: "8px 6px", textAlign: "right", verticalAlign: "top" }}>{Number(it.discount_percent) || 0}%</td>
-                <td style={{ padding: "8px 6px", textAlign: "right", verticalAlign: "top", fontWeight: 600 }}>{formatMoney(after, currency)}</td>
+                {!hidePrices && (
+                  <>
+                    <td style={{ padding: "8px 6px", textAlign: "right", verticalAlign: "top" }}>{formatMoney(it.unit_price, currency)}</td>
+                    <td style={{ padding: "8px 6px", textAlign: "right", verticalAlign: "top" }}>{Number(it.discount_percent) || 0}%</td>
+                    <td style={{ padding: "8px 6px", textAlign: "right", verticalAlign: "top", fontWeight: 600 }}>{formatMoney(after, currency)}</td>
+                  </>
+                )}
               </tr>
             );
           })}
@@ -147,29 +155,31 @@ export default function QuotePDFTemplate({ quote, customer, company, signed = fa
       </table>
 
       {/* Totals */}
-      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
-        <table style={{ fontSize: 11, minWidth: 280 }}>
-          <tbody>
-            <tr>
-              <td style={{ padding: "4px 10px", color: "#475569" }}>Ara Toplam</td>
-              <td style={{ padding: "4px 10px", textAlign: "right" }}>{formatMoney(subtotal, currency)}</td>
-            </tr>
-            {Number(discount_rate) > 0 && (
+      {!hidePrices && (
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
+          <table style={{ fontSize: 11, minWidth: 280 }}>
+            <tbody>
               <tr>
-                <td style={{ padding: "4px 10px", color: "#b91c1c" }}>İskonto (%{discount_rate})</td>
-                <td style={{ padding: "4px 10px", textAlign: "right", color: "#b91c1c" }}>- {formatMoney(discount_amount, currency)}</td>
+                <td style={{ padding: "4px 10px", color: "#475569" }}>Ara Toplam</td>
+                <td style={{ padding: "4px 10px", textAlign: "right" }}>{formatMoney(subtotal, currency)}</td>
               </tr>
-            )}
-            <tr style={{ background: "#0073c4", color: "#fff" }}>
-              <td style={{ padding: "10px", fontWeight: 700, lineHeight: 1.25 }}>
-                GENEL TOPLAM
-                <div style={{ fontSize: 8, fontWeight: 500, opacity: 0.9, letterSpacing: 1 }}>KDV DAHİL</div>
-              </td>
-              <td style={{ padding: "10px", textAlign: "right", fontWeight: 700, fontSize: 13 }}>{formatMoney(grand_total, currency)}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+              {Number(discount_rate) > 0 && (
+                <tr>
+                  <td style={{ padding: "4px 10px", color: "#b91c1c" }}>İskonto (%{discount_rate})</td>
+                  <td style={{ padding: "4px 10px", textAlign: "right", color: "#b91c1c" }}>- {formatMoney(discount_amount, currency)}</td>
+                </tr>
+              )}
+              <tr style={{ background: "#0073c4", color: "#fff" }}>
+                <td style={{ padding: "10px", fontWeight: 700, lineHeight: 1.25 }}>
+                  GENEL TOPLAM
+                  <div style={{ fontSize: 8, fontWeight: 500, opacity: 0.9, letterSpacing: 1 }}>KDV DAHİL</div>
+                </td>
+                <td style={{ padding: "10px", textAlign: "right", fontWeight: 700, fontSize: 13 }}>{formatMoney(grand_total, currency)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Notes */}
       {notes && (

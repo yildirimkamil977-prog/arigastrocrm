@@ -12,6 +12,7 @@ import {
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "../components/ui/popover";
+import { Switch } from "../components/ui/switch";
 import { Pencil, Plus, Save, Search, Trash2, ArrowLeft, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -32,6 +33,8 @@ export default function QuoteForm() {
   const [customerQuery, setCustomerQuery] = useState("");
   const [currency, setCurrency] = useState("TRY");
   const [discountRate, setDiscountRate] = useState(0);
+  const [vatRate, setVatRate] = useState(20);
+  const [vatRemoved, setVatRemoved] = useState(false);
   const [validUntil, setValidUntil] = useState(plusDaysISO(30));
   const [notes, setNotes] = useState("");
   const [status, setStatus] = useState("taslak");
@@ -53,6 +56,9 @@ export default function QuoteForm() {
         if (!isEdit && s.data) {
           setValidUntil(plusDaysISO(s.data.default_validity_days ?? 30));
           setNotes(s.data.default_quote_notes || "");
+          const dv = Number(s.data.default_vat_rate ?? 20);
+          setVatRate(dv > 0 ? dv : 20);
+          setVatRemoved(dv === 0 ? false : false);
         }
         if (isEdit) {
           const q = await api.get(`/quotes/${id}`);
@@ -61,6 +67,9 @@ export default function QuoteForm() {
           setSelectedCustomer(d.customer || null);
           setCurrency(d.currency);
           setDiscountRate(d.discount_rate);
+          const existingVat = Number(d.vat_rate || 0);
+          setVatRate(existingVat > 0 ? existingVat : 20);
+          setVatRemoved(existingVat === 0);
           setValidUntil((d.valid_until || "").slice(0, 10));
           setNotes(d.notes || "");
           setStatus(d.status);
@@ -108,10 +117,13 @@ export default function QuoteForm() {
       const line = (Number(it.quantity) || 0) * (Number(it.unit_price) || 0);
       sub += line - line * ((Number(it.discount_percent) || 0) / 100);
     });
-    const discAmount = sub * ((Number(discountRate) || 0) / 100);
-    const grand = sub - discAmount;
-    return { subtotal: sub, discAmount, grand };
-  }, [items, discountRate]);
+    const effectiveVat = vatRemoved ? 0 : (Number(vatRate) || 0);
+    const vatAmount = sub * (effectiveVat / 100);
+    const totalWithVat = sub + vatAmount;
+    const discAmount = totalWithVat * ((Number(discountRate) || 0) / 100);
+    const grand = totalWithVat - discAmount;
+    return { subtotal: sub, vatAmount, totalWithVat, discAmount, grand, effectiveVat };
+  }, [items, discountRate, vatRate, vatRemoved]);
 
   const addProduct = (p) => {
     setItems((xs) => [
@@ -154,7 +166,7 @@ export default function QuoteForm() {
       const payload = {
         customer_id: customerId,
         currency,
-        vat_rate: 0,
+        vat_rate: vatRemoved ? 0 : (Number(vatRate) || 0),
         discount_rate: Number(discountRate) || 0,
         valid_until: validUntil,
         notes,
@@ -391,8 +403,38 @@ export default function QuoteForm() {
             <div><Label>Geçerlilik Tarihi</Label>
               <Input type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} data-testid="quote-valid-until" />
             </div>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-slate-800">KDV Kaldır</Label>
+                  <div className="text-[11px] text-slate-500 leading-tight mt-0.5">
+                    Açıldığında fiyatlar KDV dahil kabul edilir, teklife KDV eklenmez.
+                  </div>
+                </div>
+                <Switch
+                  checked={vatRemoved}
+                  onCheckedChange={setVatRemoved}
+                  data-testid="quote-vat-removed-switch"
+                />
+              </div>
+              {!vatRemoved && (
+                <div>
+                  <Label>KDV Oranı (%)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={vatRate}
+                    onChange={(e) => setVatRate(e.target.value)}
+                    data-testid="quote-vat-rate"
+                  />
+                  <div className="text-[11px] text-slate-500 mt-1">
+                    Ürün birim fiyatları KDV hariçtir. Girilen oran kadar KDV eklenir.
+                  </div>
+                </div>
+              )}
+            </div>
             <div>
-              <Label>İskonto (%) <span className="text-xs text-slate-500 font-normal">(KDV dahil toplam üzerinden)</span></Label>
+              <Label>İskonto (%) <span className="text-xs text-slate-500 font-normal">({vatRemoved ? "Toplam üzerinden" : "KDV dahil toplam üzerinden"})</span></Label>
               <Input type="number" step="0.01" value={discountRate} onChange={(e) => setDiscountRate(e.target.value)} data-testid="quote-discount-rate" />
             </div>
             <div><Label>Durum</Label>
@@ -411,7 +453,10 @@ export default function QuoteForm() {
 
           <section className="bg-white border border-slate-200 rounded-xl shadow-sm p-4 sm:p-6 lg:sticky lg:top-4" data-testid="quote-totals">
             <h3 className="font-heading font-semibold mb-4">Toplam</h3>
-            <Row label="Ara Toplam" value={formatMoney(totals.subtotal, currency)} />
+            <Row label={vatRemoved ? "Ara Toplam" : "Ara Toplam (KDV Hariç)"} value={formatMoney(totals.subtotal, currency)} />
+            {!vatRemoved && Number(totals.effectiveVat) > 0 && (
+              <Row label={`KDV (%${totals.effectiveVat})`} value={`+ ${formatMoney(totals.vatAmount, currency)}`} />
+            )}
             {Number(discountRate) > 0 && (
               <Row label={`İskonto (%${discountRate})`} value={`- ${formatMoney(totals.discAmount, currency)}`} accent="red" />
             )}

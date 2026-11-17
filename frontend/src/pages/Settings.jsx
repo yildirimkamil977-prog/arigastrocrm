@@ -242,6 +242,17 @@ export default function Settings() {
         <TabsContent value="quote">
           <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div><Label>Varsayılan Geçerlilik (gün)</Label><Input type="number" value={form.default_validity_days} onChange={(e) => set("default_validity_days", Number(e.target.value) || 30)} /></div>
+            <div>
+              <Label>Varsayılan KDV Oranı (%)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={form.default_vat_rate ?? 20}
+                onChange={(e) => set("default_vat_rate", Number(e.target.value) || 0)}
+                data-testid="settings-default-vat-rate"
+              />
+              <p className="text-xs text-slate-500 mt-1">Yeni teklif oluşturulurken varsayılan olarak bu oran kullanılır. Ürün fiyatları KDV hariç kabul edilir.</p>
+            </div>
             <div className="md:col-span-2"><Label>Varsayılan Teklif Notları</Label><Textarea rows={4} value={form.default_quote_notes} onChange={(e) => set("default_quote_notes", e.target.value)} placeholder="Ödeme koşulları, teslimat süresi, garanti..." /></div>
           </div>
         </TabsContent>

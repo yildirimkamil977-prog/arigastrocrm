@@ -32,9 +32,11 @@ export default function QuotePDFTemplate({ quote, customer, company, signed = fa
   const {
     quote_no, issue_date, valid_until, currency, items = [],
     subtotal = 0,
+    vat_rate = 0, vat_amount = 0,
     discount_amount = 0, grand_total = 0, discount_rate = 0,
     notes,
   } = quote || {};
+  const hasVat = Number(vat_rate) > 0;
   const authorizedName = company?.authorized_person_name || "";
 
   return (
@@ -162,9 +164,15 @@ export default function QuotePDFTemplate({ quote, customer, company, signed = fa
           <table style={{ fontSize: 11, minWidth: 280 }}>
             <tbody>
               <tr>
-                <td style={{ padding: "4px 10px", color: "#475569" }}>Ara Toplam</td>
+                <td style={{ padding: "4px 10px", color: "#475569" }}>{hasVat ? "Ara Toplam (KDV Hariç)" : "Ara Toplam"}</td>
                 <td style={{ padding: "4px 10px", textAlign: "right" }}>{formatMoney(subtotal, currency)}</td>
               </tr>
+              {hasVat && (
+                <tr>
+                  <td style={{ padding: "4px 10px", color: "#475569" }}>KDV (%{vat_rate})</td>
+                  <td style={{ padding: "4px 10px", textAlign: "right" }}>+ {formatMoney(vat_amount, currency)}</td>
+                </tr>
+              )}
               {Number(discount_rate) > 0 && (
                 <tr>
                   <td style={{ padding: "4px 10px", color: "#b91c1c" }}>İskonto (%{discount_rate})</td>
